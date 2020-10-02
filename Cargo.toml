@@ -13,8 +13,8 @@ serde = { version = "1.0.11", features = ["derive"] }
 serde_json = "1.0.57"
 typed-builder = "0.7.0"
 validator = { version = "0.11", features = ["derive"] }
-validator_derive = "0.11.0"
 quick-error = "=1.2.2"
 derive_builder = "0.9.0"
 structopt = "0.3.18"
 clap = "2.33.3"
+exitcode = "1.1.2"

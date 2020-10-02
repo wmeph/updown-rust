@@ -1,11 +1,10 @@
 use core::option::Option::{None, Some};
-use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use validator::Validate;
+use std::iter::Iterator;
+use validator::{Validate, ValidationError};
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Default, Builder)]
-#[builder(default, setter(into, strip_option))]
+#[derive(Clone, Validate, Serialize, Deserialize, Debug, Default)]
 pub struct Check {
     pub(crate) token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,6 +25,7 @@ pub struct Check {
     #[serde(skip_serializing)]
     error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[validate(custom = "validate_period")]
     period: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     apdex_t: Option<f32>,
@@ -61,7 +61,112 @@ pub struct Check {
     metrics: Option<Metrics>,
 }
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Builder)]
+fn validate_period(period: u32) -> Result<(), ValidationError> {
+    match period {
+        15 | 60 | 120 | 3600 => Ok(()),
+        _ => Err(ValidationError::new(concat!("Invalid value for period"))),
+    }
+}
+
+impl Check {
+    pub fn new() -> Check {
+        Check {
+            token: None,
+            url: None,
+            alias: None,
+            last_status: None,
+            uptime: None,
+            down: None,
+            down_since: None,
+            error: None,
+            period: None,
+            apdex_t: None,
+            string_match: None,
+            enabled: None,
+            published: None,
+            disabled_locations: None,
+            last_check_at: None,
+            next_check_at: None,
+            mute_until: None,
+            favicon_url: None,
+            custom_headers: None,
+            http_verb: None,
+            http_body: None,
+            ssl: None,
+            metrics: None,
+        }
+    }
+
+    pub fn token<'a>(&'a mut self, token: String) -> &'a mut Check {
+        self.token = Some(token);
+        self
+    }
+
+    pub fn url<'a>(&'a mut self, url: String) -> &'a mut Check {
+        self.url = Some(url);
+        self
+    }
+
+    pub fn period<'a>(&'a mut self, period: u32) -> &'a mut Check {
+        self.period = Some(period);
+        self
+    }
+
+    pub fn apdex_t<'a>(&'a mut self, apdex_t: f32) -> &'a mut Check {
+        self.apdex_t = Some(apdex_t);
+        self
+    }
+
+    pub fn enabled<'a>(&'a mut self, enabled: bool) -> &'a mut Check {
+        self.enabled = Some(enabled);
+        self
+    }
+
+    pub fn published<'a>(&'a mut self, published: bool) -> &'a mut Check {
+        self.published = Some(published);
+        self
+    }
+
+    pub fn alias<'a>(&'a mut self, alias: String) -> &'a mut Check {
+        self.alias = Some(alias);
+        self
+    }
+
+    pub fn string_match<'a>(&'a mut self, string_match: String) -> &'a mut Check {
+        self.string_match = Some(string_match);
+        self
+    }
+
+    pub fn mute_until<'a>(&'a mut self, mute_until: String) -> &'a mut Check {
+        self.mute_until = Some(mute_until);
+        self
+    }
+
+    pub fn http_verb<'a>(&'a mut self, http_verb: String) -> &'a mut Check {
+        self.http_verb = Some(http_verb);
+        self
+    }
+
+    pub fn http_body<'a>(&'a mut self, http_body: String) -> &'a mut Check {
+        self.http_body = Some(http_body);
+        self
+    }
+
+    pub fn disabled_locations<'a>(&'a mut self, disabled_locations: Vec<String>) -> &'a mut Check {
+        self.disabled_locations = Some(disabled_locations);
+        self
+    }
+
+    pub fn custom_headers<'a>(
+        &'a mut self,
+        custom_headers: HashMap<String, String>,
+    ) -> &'a mut Check {
+        self.custom_headers = Some(custom_headers);
+        self
+    }
+}
+
+#[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Ssl {
     #[serde(skip_serializing_if = "Option::is_none")]
     tested_at: Option<String>,
@@ -73,7 +178,7 @@ pub struct Ssl {
     error: Option<String>,
 }
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Builder)]
+#[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Metrics {
     #[serde(skip_serializing_if = "Option::is_none")]
     apdex: Option<f32>,
@@ -81,7 +186,7 @@ pub struct Metrics {
     timings: Option<Timings>,
 }
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Builder)]
+#[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Requests {
     #[serde(skip_serializing_if = "Option::is_none")]
     samples: Option<u32>,
@@ -92,7 +197,7 @@ pub struct Requests {
     timings: Option<Timings>,
 }
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Builder)]
+#[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct ResponseTimes {
     under125: Option<u32>,
     under250: Option<u32>,
@@ -102,7 +207,7 @@ pub struct ResponseTimes {
     under4000: Option<u32>,
 }
 
-#[derive(Clone, Serialize, Validate, Deserialize, Debug, Builder)]
+#[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Timings {
     redirect: Option<u32>,
     namelookup: Option<u32>,
