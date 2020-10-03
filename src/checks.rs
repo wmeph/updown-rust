@@ -1,7 +1,7 @@
 use core::option::Option::{None, Some};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::iter::Iterator;
+
 use validator::{Validate, ValidationError};
 
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default)]
