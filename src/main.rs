@@ -254,8 +254,9 @@ async fn main() {
             println!("{:?}", result);
             // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
         }
-        // ("downtimes", Some(m)) => downtimes(&mut client, &m).await,
+
         // ("metrics", Some(m)) => metrics(&mut client, &m).await,
+
         ("add", Some(matches)) => {
             let client = get_client();
             let url = matches.value_of("url").unwrap();
