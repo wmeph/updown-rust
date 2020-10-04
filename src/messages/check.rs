@@ -7,6 +7,7 @@ use clap::ArgMatches;
 use std::process::exit;
 use validator::{Validate, ValidationError};
 
+/// Check represents the output of /api/checks/:token; Vec<Check> is deserialized from /api/checks
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default)]
 pub struct Check {
     pub(crate) token: Option<String>,
@@ -71,7 +72,7 @@ fn validate_period(period: u32) -> Result<(), ValidationError> {
     }
 }
 
-
+/// CheckParams represents the parameters sent to PUT /api/checks:token and POST /api/checks
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
 #[builder(private, setter(strip_option))]
 pub struct CheckParams {
@@ -122,12 +123,14 @@ pub struct CheckParams {
 }
 
 impl CheckParams {
+    /// Parses parameters for the update request: PUT /api/checks/:token
     pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> CheckParams {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         parse(params, matches)
     }
 
+    /// Parses parmeters for the add request: POST /api/checks
     pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> CheckParams {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());

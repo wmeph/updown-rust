@@ -4,6 +4,7 @@ extern crate quick_error;
 use crate::validator::Validate;
 use clap::ArgMatches;
 
+use cli::Updown;
 use client::Client;
 
 use crate::messages::check::{Check, CheckParams};
@@ -14,6 +15,7 @@ use std::env;
 use std::process::exit;
 use structopt::StructOpt;
 use validator::ValidationErrors;
+use std::str::FromStr;
 
 extern crate clap;
 extern crate exitcode;
@@ -21,206 +23,39 @@ extern crate validator;
 #[macro_use]
 extern crate derive_builder;
 
+mod cli;
 mod client;
+mod config;
 mod messages;
 
-#[derive(Serialize, Deserialize, Default)]
-struct Config {
-    api_key: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    private_api_key: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    user_agent: Option<String>,
-}
-
-#[derive(Debug, StructOpt)]
-#[structopt(
-    name = "updown",
-    about = "A cli for http://updown.io",
-    rename_all = "snake"
-)]
-enum Opt {
-    Config {
-        api_key: String,
-
-        private_api_key: Option<String>,
-
-        user_agent: Option<String>,
-    },
-
-    All {},
-
-    Check {
-        token: String,
-
-        #[structopt(long)]
-        metrics: bool,
-    },
-
-    Downtimes {
-        token: String,
-
-        #[structopt(long)]
-        page: Option<i32>,
-
-        #[structopt(long)]
-        results: Option<bool>,
-    },
-
-    Metrics {
-        token: String,
-
-        #[structopt(long)]
-        from: Option<String>,
-
-        #[structopt(long)]
-        to: Option<String>,
-
-        #[structopt(long)]
-        group: Option<String>,
-    },
-
-    Add {
-        url: String,
-
-        #[structopt(long)]
-        alias: Option<String>,
-
-        #[structopt(long)]
-        last_status: Option<u16>,
-
-        #[structopt(long)]
-        uptime: Option<f32>,
-
-        #[structopt(long)]
-        down: Option<bool>,
-
-        #[structopt(long)]
-        down_since: Option<String>,
-
-        #[structopt(long)]
-        error: Option<String>,
-
-        #[structopt(long)]
-        period: Option<u32>,
-
-        #[structopt(long)]
-        apdex_t: Option<f32>,
-
-        #[structopt(long)]
-        string_match: Option<String>,
-
-        #[structopt(long)]
-        enabled: Option<bool>,
-
-        #[structopt(long)]
-        published: Option<bool>,
-
-        #[structopt(long)]
-        disabled_locations: Option<Vec<String>>,
-
-        #[structopt(long)]
-        last_check_at: Option<String>,
-
-        #[structopt(long)]
-        next_check_at: Option<String>,
-
-        #[structopt(long)]
-        mute_until: Option<String>, //?
-
-        #[structopt(long)]
-        favicon_url: Option<String>,
-
-        //#[structopt(long)]
-        //custom_headers: Option<HashMap<String, String>>,
-        #[structopt(long)]
-        http_verb: Option<String>,
-
-        #[structopt(long)]
-        http_body: Option<String>,
-    },
-
-    Update {
-        token: String,
-
-        #[structopt(long)]
-        url: Option<String>,
-
-        #[structopt(long)]
-        alias: Option<String>,
-
-        #[structopt(long)]
-        last_status: Option<u16>,
-
-        #[structopt(long)]
-        uptime: Option<f32>,
-
-        #[structopt(long)]
-        down: Option<bool>,
-
-        #[structopt(long)]
-        down_since: Option<String>,
-
-        #[structopt(long)]
-        error: Option<String>,
-
-        #[structopt(long)]
-        period: Option<u32>,
-
-        #[structopt(long)]
-        apdex_t: Option<f32>,
-
-        #[structopt(long)]
-        string_match: Option<String>,
-
-        #[structopt(long)]
-        enabled: Option<bool>,
-
-        #[structopt(long)]
-        published: Option<bool>,
-
-        #[structopt(long)]
-        disabled_locations: Option<Vec<String>>,
-
-        #[structopt(long)]
-        last_check_at: Option<String>,
-
-        #[structopt(long)]
-        next_check_at: Option<String>,
-
-        #[structopt(long)]
-        mute_until: Option<String>, //?
-
-        #[structopt(long)]
-        favicon_url: Option<String>,
-
-        //#[structopt(long)]
-        //custom_headers: Option<HashMap<String, String>>,
-        #[structopt(long)]
-        http_verb: Option<String>,
-
-        #[structopt(long)]
-        http_body: Option<String>,
-    },
-
-    Delete {
-        token: String,
-    },
-}
-
+/// This is a bit of a mish-mash and probably needs sorting out!
 #[tokio::main]
 async fn main() {
-    Opt::from_args();
-    let matches = Opt::clap().get_matches();
+    // Opt::from_args();
+    let matches = Updown::clap().get_matches();
 
-    match matches.subcommand() {
-        ("config", Some(matches)) => match matches.value_of("api_key") {
+    //let subcommand : &str = Updown::clap().get_matches(.subcommand().0;
+
+    let subcommand_name = matches.subcommand().0;
+    if subcommand_name == "" {
+        println!("Nowt");
+        if matches.is_present("token_or_url")  {
+            println!("token");
+            exit(exitcode::OK);
+        }
+        else {
+            Updown::clap().print_help();
+            exit(exitcode::NOINPUT)
+        }
+    }
+
+    let subcommand_matches = matches.subcommand().1.unwrap();
+    match subcommand_name {
+        "config" => match subcommand_matches.value_of("api_key") {
             Some(k) => {
                 let api_key = k.to_string();
-                let config: Config = Config {
-                    api_key: api_key,
+                let config = config::Config {
+                    api_key,
                     private_api_key: None,
                     user_agent: None,
                 };
@@ -232,23 +67,23 @@ async fn main() {
             }
         },
 
-        ("all", Some(matches)) => {
-            let client = get_client();
+        "all" => {
+            let client = Client::new();
             let result = serde_json::to_string(&client.all().await.unwrap()).unwrap();
             println!("{}", result);
         }
-        ("check", Some(matches)) => {
-            let client = get_client();
-            let metrics = matches.is_present("metrics");
-            let token = matches.value_of("token").unwrap();
+        "check" => {
+            let client = Client::new();
+            let metrics = subcommand_matches.is_present("metrics");
+            let token = subcommand_matches.value_of("token").unwrap();
             let result =
                 serde_json::to_string(&client.check(token, metrics).await.unwrap()).unwrap();
             println!("{}", result);
         }
-        ("downtimes", Some(matches)) => {
-            let client = get_client();
-            let token = matches.value_of("token").unwrap();
-            let params = DowntimeParams::parse(&client.api_key, matches);
+        "downtimes" => {
+            let client = Client::new();
+            let token = subcommand_matches.value_of("token").unwrap();
+            let params = DowntimeParams::parse(&client.api_key, &subcommand_matches);
             let result =
                 &client.downtimes(token, &params).await;
             println!("{:?}", result);
@@ -257,50 +92,33 @@ async fn main() {
 
         // ("metrics", Some(m)) => metrics(&mut client, &m).await,
 
-        ("add", Some(matches)) => {
-            let client = get_client();
-            let url = matches.value_of("url").unwrap();
-            let params = CheckParams::parse_add(&client.api_key, url.to_string(), matches);
-            let result = serde_json::to_string(&client.add(url, &params).await.unwrap()).unwrap();
+        "add" => {
+            let client = Client::new();
+            let url = subcommand_matches.value_of("url").unwrap();
+            let params = CheckParams::parse_add(&client.api_key, url.to_string(), &subcommand_matches);
+            let result = serde_json::to_string(&client.add(&params).await.unwrap()).unwrap();
             println!("{}", result);
         }
-        ("update", Some(matches)) => {
-            let client = get_client();
-            let token = matches.value_of("token").unwrap();
-            let params = CheckParams::parse_update(&client.api_key, matches);
+        "update" => {
+            let client = Client::new();
+            let token = subcommand_matches.value_of("token").unwrap();
+            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches);
             let result =
                 serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
             println!("{}", result);
         }
-        ("delete", Some(matches)) => {
-            let client = get_client();
-            let token = matches.value_of("token").unwrap();
+        "delete" => {
+            let client = Client::new();
+            let token = subcommand_matches.value_of("token").unwrap();
             let result = serde_json::to_string(&client.delete(token).await.unwrap()).unwrap();
             println!("{}", result);
         }
+
         _ => unimplemented!(),
     }
 }
 
-fn get_client() -> Client {
-    let config: Config;
-
-    match confy::load("updown-rust") {
-        Ok(c) => config = c,
-        Err(_e) => {
-            println!("No api key provided. Exiting.");
-            exit(exitcode::CONFIG);
-        }
-    }
-
-    let mut client = Client::new(
-        config.api_key.to_string(),
-        "ro-ATHcQvgqybDoLSodLzRA".to_string(),
-        "".to_string(),
-    );
-    client
-}
-
+///TODO This should probably be handled by a CLI-specific error type
 fn print_errors(e: ValidationErrors) {
     for (k, v) in e.field_errors() {
         println!(

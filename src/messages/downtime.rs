@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::process::exit;
 use validator::Validate;
 
+/// Downtime represents the output of /api/checks/:token/downtimes
 #[derive(Serialize, Validate, Deserialize, Debug)]
 pub(crate) struct Downtime {
     id: String,
@@ -13,6 +14,7 @@ pub(crate) struct Downtime {
     duration: Option<u64>,
 }
 
+/// DowntimeParams represents the parameters sent to /api/checks/:token/downtimes
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
 #[builder(private, setter(strip_option))]
 pub(crate) struct DowntimeParams {

@@ -5,12 +5,15 @@ use std::collections::HashMap;
 use crate::messages::check::{Check, CheckParams};
 use crate::messages::downtime::{Downtime, DowntimeParams};
 use crate::messages::MessageError;
-use crate::CHECKS_URL;
+use crate::config::Config;
+use crate::{CHECKS_URL};
 use reqwest::{Response, Url};
+use std::process::exit;
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
 /// The read-only key is used internally for GET requests, the full key for POST and PUT requests.
+/// The implementation defines methods that are used for the
 pub(crate) struct Client {
     pub(crate) api_key: String,
     read_only_api_key: String,
@@ -20,16 +23,6 @@ pub(crate) struct Client {
 
 ///
 impl Client {
-    pub fn new(api_key: String, read_only_api_key: String, user_agent: String) -> Self {
-        format!("{}{}{}", CHECKS_URL, "?api-key=", read_only_api_key);
-        let http_client = reqwest::Client::new();
-        Client {
-            api_key,
-            read_only_api_key,
-            user_agent,
-            http_client,
-        }
-    }
 
     pub(crate) async fn all(&self) -> Result<Vec<Check>, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
@@ -97,7 +90,6 @@ impl Client {
 
     pub(crate) async fn add(
         &self,
-        _url: &str,
         params: &CheckParams,
     ) -> Result<Check, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
@@ -144,5 +136,25 @@ impl Client {
             .json()
             .await?;
         Ok(resp)
+    }
+
+    pub(crate) fn new() -> Client {
+        let config: Config;
+
+        match confy::load("updown-rust") {
+            Ok(c) => config = c,
+            Err(e) => {
+                println!("No api key provided. Exiting.");
+                exit(exitcode::CONFIG);
+            }
+        }
+
+        let mut client = Client{
+            api_key : config.api_key.to_string(),
+            read_only_api_key: "ro-ATHcQvgqybDoLSodLzRA".to_string(),
+            user_agent: "".to_string(),
+            http_client: Default::default()
+        };
+        client
     }
 }

@@ -39,3 +39,16 @@ pub struct Timings {
     response: Option<u32>,
     total: Option<u32>,
 }
+
+struct MetricsParams {
+    // from [time] = 2020-09-03 20:59:51 UTC
+    // Start time, default to 1 month ago ­· supported formats ⇣
+    // to [time] = 2020-10-03 22:59:51 +0200
+    // End time, default to now ­· supported formats ⇣
+    // group [symbol]
+    // Group data by 'time' (hour) or 'host' (location)
+
+    from : Option<String>,
+    to : Option<String>,
+    group : Option<String>
+}
