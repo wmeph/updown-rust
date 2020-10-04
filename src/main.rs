@@ -1,30 +1,28 @@
 #[macro_use]
 extern crate quick_error;
 
-use crate::checks::Check;
 use crate::validator::Validate;
 use clap::ArgMatches;
 
-use crate::downtime::DowntimeParams;
+use client::Client;
+
+use crate::messages::check::{Check, CheckParams};
+use crate::messages::downtime::DowntimeParams;
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::env;
 use std::process::exit;
 use structopt::StructOpt;
 use validator::ValidationErrors;
-use crate::client::Client;
 
-#[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate validator;
 extern crate exitcode;
+extern crate validator;
 #[macro_use]
 extern crate derive_builder;
 
-mod checks;
 mod client;
-mod downtime;
+mod messages;
 
 #[derive(Serialize, Deserialize, Default)]
 struct Config {
@@ -217,7 +215,6 @@ async fn main() {
     Opt::from_args();
     let matches = Opt::clap().get_matches();
 
-
     match matches.subcommand() {
         ("config", Some(matches)) => match matches.value_of("api_key") {
             Some(k) => {
@@ -229,10 +226,10 @@ async fn main() {
                 };
                 confy::store("updown-rust", config);
             }
-            None =>  {
+            None => {
                 println!("No api key provided. Exiting.");
                 exit(exitcode::CONFIG);
-            },
+            }
         },
 
         ("all", Some(matches)) => {
@@ -251,8 +248,10 @@ async fn main() {
         ("downtimes", Some(matches)) => {
             let client = get_client();
             let token = matches.value_of("token").unwrap();
-            let params = DowntimeParams::parse(client.api_key.as_str(), matches);
-            let _resp = client.downtimes(token, &params).await;
+            let params = DowntimeParams::parse(&client.api_key, matches);
+            let result =
+                &client.downtimes(token, &params).await;
+            println!("{:?}", result);
             // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
         }
         // ("downtimes", Some(m)) => downtimes(&mut client, &m).await,
@@ -260,14 +259,14 @@ async fn main() {
         ("add", Some(matches)) => {
             let client = get_client();
             let url = matches.value_of("url").unwrap();
-            let params = params(&matches);
+            let params = CheckParams::parse_add(&client.api_key, url.to_string(), matches);
             let result = serde_json::to_string(&client.add(url, &params).await.unwrap()).unwrap();
             println!("{}", result);
         }
         ("update", Some(matches)) => {
             let client = get_client();
             let token = matches.value_of("token").unwrap();
-            let params = params(&matches);
+            let params = CheckParams::parse_update(&client.api_key, matches);
             let result =
                 serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
             println!("{}", result);
@@ -309,75 +308,4 @@ fn print_errors(e: ValidationErrors) {
         );
     }
 }
-
-
-// TODO Move this to CheckParams
-fn params(matches: &ArgMatches<'_>) -> Check {
-    let mut check = checks::Check::new();
-    if matches.is_present("url") {
-        check.url(matches.value_of("url").unwrap().parse().unwrap());
-    }
-    if matches.is_present("period") {
-        let period = matches.value_of("period").unwrap().parse::<u32>().unwrap();
-        check.period(period);
-    }
-    if matches.is_present("apdex_t") {
-        let apdex_t = matches.value_of("apdex_t").unwrap().parse::<f32>().unwrap();
-        check.apdex_t(apdex_t);
-    }
-    if matches.is_present("enabled") {
-        check.enabled(
-            matches
-                .value_of("enabled")
-                .unwrap()
-                .parse::<bool>()
-                .unwrap(),
-        );
-    }
-    if matches.is_present("published") {
-        check.published(
-            matches
-                .value_of("published")
-                .unwrap()
-                .parse::<bool>()
-                .unwrap(),
-        );
-    }
-    if matches.is_present("alias") {
-        check.alias(matches.value_of("alias").unwrap().parse().unwrap());
-    }
-    if matches.is_present("string_match") {
-        check.string_match(matches.value_of("string_match").unwrap().parse().unwrap());
-    }
-    if matches.is_present("mute_until") {
-        check.mute_until(matches.value_of("mute_until").unwrap().parse().unwrap());
-    }
-    if matches.is_present("http_verb") {
-        check.http_verb(matches.value_of("http_verb").unwrap().parse().unwrap());
-    }
-    if matches.is_present("http_body") {
-        check.http_body(matches.value_of("http_body").unwrap().parse().unwrap());
-    }
-    if matches.is_present("disabled_locations") {
-        unimplemented!()
-        //check.disabled_locations(matches.value_of("disabled_locations").unwrap().parse().unwrap());
-    }
-    if matches.is_present("custom_headers") {
-        unimplemented!()
-        // check.custom_headers(matches.value_of("custom_headers").unwrap().parse().unwrap());
-    }
-
-    let result = check.validate();
-    match result {
-        Ok(()) => {
-            println!("valid!");
-            return check;
-        }
-        Err(e) => {
-            print_errors(e);
-            exit(exitcode::DATAERR);
-        }
-    };
-}
-
 const CHECKS_URL: &'static str = "https://updown.io/api/checks";

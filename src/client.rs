@@ -2,12 +2,11 @@ use core::result::Result::Ok;
 
 use std::collections::HashMap;
 
-use crate::checks::{Check, ChecksError};
-use crate::downtime::DowntimeParams;
+use crate::messages::check::{Check, CheckParams};
+use crate::messages::downtime::{Downtime, DowntimeParams};
+use crate::messages::MessageError;
 use crate::CHECKS_URL;
 use reqwest::{Response, Url};
-
-use std::cell::RefCell;
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -16,8 +15,6 @@ pub(crate) struct Client {
     pub(crate) api_key: String,
     read_only_api_key: String,
     user_agent: String,
-
-    tokens: RefCell<HashMap<String, String>>,
     http_client: reqwest::Client,
 }
 
@@ -25,18 +22,16 @@ pub(crate) struct Client {
 impl Client {
     pub fn new(api_key: String, read_only_api_key: String, user_agent: String) -> Self {
         format!("{}{}{}", CHECKS_URL, "?api-key=", read_only_api_key);
-        let tokens = RefCell::new(HashMap::new());
         let http_client = reqwest::Client::new();
         Client {
             api_key,
             read_only_api_key,
             user_agent,
-            tokens,
             http_client,
         }
     }
 
-    pub(crate) async fn all(&self) -> Result<Vec<Check>, ChecksError> {
+    pub(crate) async fn all(&self) -> Result<Vec<Check>, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
         let resp = self
             .http_client
@@ -49,7 +44,7 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn check(&self, token: &str, metrics: bool) -> Result<Check, ChecksError> {
+    pub(crate) async fn check(&self, token: &str, metrics: bool) -> Result<Check, MessageError> {
         // TODO build the request parameters in a separate function
         let mut params: HashMap<&str, &str> = HashMap::new();
         params.insert("api-key", self.read_only_api_key.as_str());
@@ -66,8 +61,8 @@ impl Client {
         &self,
         token: &str,
         params: &DowntimeParams,
-    ) -> Result<Response, ()> {
-        // -> Result<HashMap<String, Downtime>, ChecksError>{
+    ) -> Result<Vec<Downtime>, MessageError> {
+        // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
             Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
         let resp = self
@@ -75,15 +70,14 @@ impl Client {
             .get(url)
             .query(&params)
             .send()
-            .await
-            .unwrap();
-        // json()
-        // .await;
+            .await?
+            .json()
+            .await?;
         println!("{:#?}", resp);
         Ok(resp)
     }
 
-    // pub(crate) async fn metrics(&self, token: &str, from: &str, to: &str, group: &str) -> Result<Metrics, ChecksError>{
+    // pub(crate) async fn metrics(&self, token: &str, from: &str, to: &str, group: &str) -> Result<Metrics, MessageError>{
     //     let mut params: HashMap<&str, &str> = HashMap::new();
     //     params.insert("api-key", self.read_only_api_key.as_str());
     //     if from.is_some() {
@@ -101,12 +95,15 @@ impl Client {
     //     Ok(resp)
     // }
 
-    pub(crate) async fn add(&self, _url: &str, params: &Check) -> Result<Check, ChecksError> {
+    pub(crate) async fn add(
+        &self,
+        _url: &str,
+        params: &CheckParams,
+    ) -> Result<Check, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
         let resp = self
             .http_client
             .post(url)
-            .query(&[("api-key", self.api_key.as_str())])
             .json(&params)
             .send()
             .await?
@@ -115,12 +112,15 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn update(&self, token: &str, params: &Check) -> Result<Check, ChecksError> {
+    pub(crate) async fn update(
+        &self,
+        token: &str,
+        params: &CheckParams,
+    ) -> Result<Check, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned() + "/" + token).as_str()).unwrap();
         let resp = self
             .http_client
             .put(url)
-            .query(&[("api-key", self.api_key.as_str())])
             .json(&params)
             .send()
             .await?
@@ -130,7 +130,10 @@ impl Client {
     }
 
     //TODO define message type, hashmap won't work.
-    pub(crate) async fn delete(&self, token: &str) -> Result<HashMap<String, String>, ChecksError> {
+    pub(crate) async fn delete(
+        &self,
+        token: &str,
+    ) -> Result<HashMap<String, String>, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned() + "/" + token).as_str()).unwrap();
         let resp = self
             .http_client

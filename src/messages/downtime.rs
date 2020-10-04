@@ -1,14 +1,16 @@
+use crate::print_errors;
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
+use std::process::exit;
 use validator::Validate;
 
 #[derive(Serialize, Validate, Deserialize, Debug)]
-
 pub(crate) struct Downtime {
-    error: String,
-    started_at: String,
-    ended_at: String,
-    duration: u64,
+    id: String,
+    error: Option<String>,
+    started_at: Option<String>,
+    ended_at: Option<String>,
+    duration: Option<u64>,
 }
 
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
@@ -28,7 +30,7 @@ pub(crate) struct DowntimeParams {
 }
 
 impl DowntimeParams {
-    pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> DowntimeParams {
+    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> DowntimeParams {
         let mut params = DowntimeParamsBuilder::default();
         params.api_key(api_key.to_string());
         if matches.is_present("page") {
@@ -46,6 +48,19 @@ impl DowntimeParams {
         if matches.is_present("group") {
             params.group(matches.value_of("group").unwrap().parse().unwrap());
         }
-        params.build().unwrap()
+        let params: DowntimeParams = params.build().unwrap();
+            println!("{:#?}", serde_json::to_string(&params));
+
+        let result = params.validate();
+        match result {
+            Ok(()) => {
+                println!("valid!");
+                return params;
+            }
+            Err(e) => {
+                print_errors(e);
+                exit(exitcode::DATAERR);
+            }
+        };
     }
 }
