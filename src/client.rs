@@ -40,7 +40,7 @@ impl Client {
     pub(crate) async fn check(&self, token: &str, metrics: bool) -> Result<Check, MessageError> {
         // TODO build the request parameters in a separate function
         let mut params: HashMap<&str, &str> = HashMap::new();
-        params.insert("api-key", self.read_only_api_key.as_str());
+        params.insert("api-key", self.api_key.as_str());
         if metrics {
             params.insert("metrics", "true");
         }
@@ -138,23 +138,17 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) fn new() -> Client {
-        let config: Config;
-
-        match confy::load("updown-rust") {
-            Ok(c) => config = c,
-            Err(e) => {
-                println!("No api key provided. Exiting.");
-                exit(exitcode::CONFIG);
-            }
-        }
-
+    pub(crate) fn new(api_key : String, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
         let mut client = Client{
-            api_key : config.api_key.to_string(),
-            read_only_api_key: "ro-ATHcQvgqybDoLSodLzRA".to_string(),
-            user_agent: "".to_string(),
+            api_key : api_key,
+            read_only_api_key: private_api_key.unwrap_or("".to_string()),
+            user_agent: user_agent.unwrap_or("".to_string()),
             http_client: Default::default()
         };
         client
+    }
+
+    pub(crate) fn from_config(config : Config) -> Client {
+        Client::new(config.api_key, config.private_api_key, config.user_agent)
     }
 }
