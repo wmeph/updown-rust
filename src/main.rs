@@ -17,6 +17,8 @@ use structopt::StructOpt;
 use validator::ValidationErrors;
 use std::str::FromStr;
 use crate::config::Config;
+use confy::ConfyError;
+use std::error::Error;
 
 extern crate clap;
 extern crate exitcode;
@@ -69,24 +71,29 @@ async fn main() {
         },
 
         "all" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let result = serde_json::to_string(&client.all().await.unwrap()).unwrap();
             println!("{}", result);
         }
         "check" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let metrics = subcommand_matches.is_present("metrics");
             let token = subcommand_matches.value_of("token").unwrap();
             let result =
                 serde_json::to_string(&client.check(token, metrics).await.unwrap()).unwrap();
             println!("{}", result);
         }
+
         "downtimes" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
             let params = DowntimeParams::parse(&client.api_key, &subcommand_matches);
+            if params.is_err() {
+                    println!("{}", params.err().unwrap().to_string());
+                    exit(exitcode::DATAERR)
+            }
             let result =
-                &client.downtimes(token, &params).await;
+                &client.downtimes(token, &params.unwrap()).await;
             println!("{:?}", result);
             // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
         }
@@ -94,28 +101,44 @@ async fn main() {
         // ("metrics", Some(m)) => metrics(&mut client, &m).await,
 
         "add" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let url = subcommand_matches.value_of("url").unwrap();
-            let params = CheckParams::parse_add(&client.api_key, url.to_string(), &subcommand_matches);
+            let params =
+                CheckParams::parse_add(&client.api_key, url.to_string(), &subcommand_matches).unwrap();
             let result = serde_json::to_string(&client.add(&params).await.unwrap()).unwrap();
             println!("{}", result);
         }
         "update" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
-            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches);
+            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches)
+                .unwrap();
+
             let result =
                 serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
             println!("{}", result);
         }
         "delete" => {
-            let client = Client::from_config(load_config());
+            let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
             let result = serde_json::to_string(&client.delete(token).await.unwrap()).unwrap();
             println!("{}", result);
         }
 
         _ => unimplemented!(),
+    }
+}
+
+quick_error! {
+
+    /// Error specific to updown
+    #[derive(Debug)]
+    pub enum UpdownError {
+        MessageFailed (cause : messages::MessageError){from()}
+        ValidationFailed (cause : ValidationErrors){}
+        ConfigurationFailed (cause : ConfyError){from()}
+        // RequestFailed( cause : reqwest::Error){from()}
+        // JsonFailed( cause : serde_json::Error){from()}
     }
 }
 
@@ -129,17 +152,4 @@ fn print_errors(e: ValidationErrors) {
     }
 }
 
-fn load_config() -> Config{
-    let config: Config;
-
-    match confy::load("updown-rust") {
-        Ok(c) => c,
-        Err(e) => {
-            println!("No api key provided. Exiting.");
-            exit(exitcode::CONFIG);
-        }
-    }
-}
-
 const CHECKS_URL: &'static str = "https://updown.io/api/checks";
-

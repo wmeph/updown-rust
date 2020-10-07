@@ -9,6 +9,7 @@ use crate::config::Config;
 use crate::{CHECKS_URL};
 use reqwest::{Response, Url};
 use std::process::exit;
+use confy::ConfyError;
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -148,7 +149,13 @@ impl Client {
         client
     }
 
-    pub(crate) fn from_config(config : Config) -> Client {
-        Client::new(config.api_key, config.private_api_key, config.user_agent)
+    pub(crate) fn from_config() -> Result<Client, ConfyError> {
+        let client = match Config::load_config() {
+            Ok(config) => Client::new(config.api_key, config.private_api_key, config.user_agent),
+            Err(e) => return Err(e)
+        };
+        Ok(client)
     }
+
+
 }

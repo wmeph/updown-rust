@@ -1,8 +1,10 @@
-use crate::print_errors;
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use std::process::exit;
-use validator::Validate;
+use validator::{Validate, ValidationError};
+use std::error::Error;
+use crate::messages::{MessageError};
+use crate::cli::{Parser, CliError};
 
 /// Downtime represents the output of /api/checks/:token/downtimes
 #[derive(Serialize, Validate, Deserialize, Debug)]
@@ -32,12 +34,18 @@ pub(crate) struct DowntimeParams {
 }
 
 impl DowntimeParams {
-    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> DowntimeParams {
+    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> Result<DowntimeParams, MessageError> {
         let mut params = DowntimeParamsBuilder::default();
         params.api_key(api_key.to_string());
-        if matches.is_present("page") {
-            params.page(matches.value_of("page").unwrap().parse::<u32>().unwrap());
+
+        // TODO put this in parser intead.
+        let mut successful_parse = true;
+        let mut parser = Parser::new();
+        let page: Result<Option<u32>, CliError> = parser.parse_value("page".to_string(), matches);
+        if page.is_err() { successful_parse = false; } else {
+            params.page(page.unwrap().unwrap());
         }
+
         if matches.is_present("results") {
             params.results(
                 matches
@@ -50,19 +58,13 @@ impl DowntimeParams {
         if matches.is_present("group") {
             params.group(matches.value_of("group").unwrap().parse().unwrap());
         }
-        let params: DowntimeParams = params.build().unwrap();
-            println!("{:#?}", serde_json::to_string(&params));
 
-        let result = params.validate();
-        match result {
-            Ok(()) => {
-                println!("valid!");
-                return params;
-            }
-            Err(e) => {
-                print_errors(e);
-                exit(exitcode::DATAERR);
-            }
-        };
+        let params: DowntimeParams = params.build().unwrap();
+        params.validate();
+
+        match successful_parse {
+            true => Ok(params),
+            false => Err(MessageError::ParseFailed(parser.parse_errors))
+        }
     }
 }

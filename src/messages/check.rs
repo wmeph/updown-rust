@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::messages::metric::Metrics;
-use crate::print_errors;
 use clap::ArgMatches;
 use std::process::exit;
 use validator::{Validate, ValidationError};
@@ -124,14 +123,14 @@ pub struct CheckParams {
 
 impl CheckParams {
     /// Parses parameters for the update request: PUT /api/checks/:token
-    pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> CheckParams {
+    pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         parse(params, matches)
     }
 
     /// Parses parmeters for the add request: POST /api/checks
-    pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> CheckParams {
+    pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         params.url(url);
@@ -139,7 +138,7 @@ impl CheckParams {
     }
 }
 
-fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> CheckParams {
+fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError>  {
     if matches.is_present("url") {
         params.url(matches.value_of("url").unwrap().parse().unwrap());
     }
@@ -193,16 +192,8 @@ fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> CheckParam
         // params.custom_headers(matches.value_of("custom_headers").unwrap().parse().unwrap());
     }
     let params: CheckParams = params.build().unwrap();
-    let result = params.validate();
-    match result {
-        Ok(()) => {
-            return params;
-        }
-        Err(e) => {
-            print_errors(e);
-            exit(exitcode::DATAERR);
-        }
-    };
+    params.validate();
+    Ok(params)
 }
 
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
