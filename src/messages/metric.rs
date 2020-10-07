@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
-pub struct Metrics {
+pub struct Metric {
     #[serde(skip_serializing_if = "Option::is_none")]
     apdex: Option<f32>,
     requests: Option<Requests>,
@@ -40,7 +40,9 @@ pub struct Timings {
     total: Option<u32>,
 }
 
-struct MetricsParams {
+#[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
+#[builder(private, setter(strip_option))]
+struct MetricParams {
     // from [time] = 2020-09-03 20:59:51 UTC
     // Start time, default to 1 month ago ­· supported formats ⇣
     // to [time] = 2020-10-03 22:59:51 +0200
@@ -48,7 +50,13 @@ struct MetricsParams {
     // group [symbol]
     // Group data by 'time' (hour) or 'host' (location)
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default = "None")]
     from : Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default = "None")]
     to : Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default = "None")]
     group : Option<String>
 }

@@ -194,43 +194,42 @@ enum Subcommand {
 #[derive(Default)]
 pub(crate) struct Parser {
     pub(crate) parse_errors : Vec<String>,
+    pub(crate) successful_parse : bool
 }
 
 impl Parser {
     pub(crate) fn new() -> Parser {
         Parser {
-            parse_errors: vec![]
+            parse_errors: vec![],
+            successful_parse : true
         }
     }
 
-    pub(crate) fn parse_value<T>(&mut self, key: String, matches: &ArgMatches<'_>) -> Result<Option<T>, CliError>
+    pub(crate) fn successful_parse(&self) -> Result<(), CliError> {
+        if !self.successful_parse {
+            Err(CliError::BadArg(self.parse_errors.join("\n")))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn parse_value<T>(&mut self, key: &str, matches: &ArgMatches<'_>) -> Option<T>
         where T: FromStr, T::Err: Debug {
         let result = matches.value_of(key);
         match &result {
             Some(r) => {
                 let v = r.parse::<T>();
                 match v {
-                    Ok(m) => Ok(Option::from(m)),
+                    Ok(m) => Option::from(m),
                     Err(e) => {
                         self.parse_errors.push(format!("page ({} given)", matches.value_of("page").unwrap()));
-                        Err(CliError::BadArg)
+                        self.successful_parse = false;
+                        None
                     }
-
                 }
             }
-
-            _ => Ok(Option::None)
+            _ => Option::None
         }
-
-
-        // if result.is_err() {
-        //     self.parse_errors.push(format!("page ({} given)", matches.value_of("page").unwrap()));
-        //     None
-        // } else {
-        //     Option::from(result.unwrap())
-        // }
-
-
     }
 }
 
@@ -239,6 +238,6 @@ quick_error! {
     /// Error specific to updown
     #[derive(Debug)]
     pub enum  CliError{
-       BadArg {}
+       BadArg (message : String) { display("Failed to parse value(s) : {}", message )}
     }
 }

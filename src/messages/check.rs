@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::messages::metric::Metrics;
+use crate::messages::metric::Metric;
 use clap::ArgMatches;
 use std::process::exit;
 use validator::{Validate, ValidationError};
@@ -60,7 +60,7 @@ pub struct Check {
     ssl: Option<Ssl>,
 
     #[serde(skip_serializing)]
-    metrics: Option<Metrics>,
+    metrics: Option<Metric>,
 }
 
 fn validate_period(period: u32) -> Result<(), ValidationError> {
