@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::fmt::Debug;
 use clap::ArgMatches;
 use std::error::Error;
+use std::collections::HashMap;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -239,5 +240,18 @@ quick_error! {
     #[derive(Debug)]
     pub enum  CliError{
        BadArg (message : String) { display("Failed to parse value(s) : {}", message )}
+    }
+}
+
+fn set<'a, T, F>(fields_to_functions : HashMap<&str, F>, matches : &ArgMatches<'_>)
+    where F: for<'b> Fn(T) -> (),
+          T: FromStr + 'a,
+          T::Err: Debug + 'a {
+    let mut parser: Parser = Parser::new();
+    for entry in fields_to_functions {
+        let v = parser.parse_value::<T>(entry.0, matches) ;
+        if v.is_some() {
+            entry.1(v.unwrap());
+        }
     }
 }
