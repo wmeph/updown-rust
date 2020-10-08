@@ -243,6 +243,9 @@ quick_error! {
     }
 }
 
+/// This function is meant to initialize builders from the derive_builder crate.
+/// The idea is to map argument names to builder functions, and to execute any function that has
+/// a corresponding value in the ArgMatches.
 fn set<'a, T, F>(fields_to_functions : HashMap<&str, F>, matches : &ArgMatches<'_>)
     where F: for<'b> Fn(T) -> (),
           T: FromStr + 'a,
