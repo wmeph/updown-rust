@@ -5,6 +5,16 @@ use crate::messages::metric::Metric;
 use clap::ArgMatches;
 use std::process::exit;
 use validator::{Validate, ValidationError};
+use crate::cli::{Parser, CliError};
+
+/// Checks represents the output of /api/checks/:token/Checks
+/// Possible return values are an array of Check messages or an error message.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Checks {
+    Error { error : Option<String> },
+    Checks(Vec<Check>)
+}
 
 /// Check represents the output of /api/checks/:token; Vec<Check> is deserialized from /api/checks
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default)]
@@ -123,77 +133,19 @@ pub struct CheckParams {
 
 impl CheckParams {
     /// Parses parameters for the update request: PUT /api/checks/:token
-    pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError> {
+    pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         parse(params, matches)
     }
 
     /// Parses parmeters for the add request: POST /api/checks
-    pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError> {
+    pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         params.url(url);
         parse(params, matches)
     }
-}
-
-fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> Result<CheckParams, ValidationError>  {
-    if matches.is_present("url") {
-        params.url(matches.value_of("url").unwrap().parse().unwrap());
-    }
-    if matches.is_present("period") {
-        let period = matches.value_of("period").unwrap().parse::<u32>().unwrap();
-        params.period(period);
-    }
-    if matches.is_present("apdex_t") {
-        let apdex_t = matches.value_of("apdex_t").unwrap().parse::<f32>().unwrap();
-        params.apdex_t(apdex_t);
-    }
-    if matches.is_present("enabled") {
-        params.enabled(
-            matches
-                .value_of("enabled")
-                .unwrap()
-                .parse::<bool>()
-                .unwrap(),
-        );
-    }
-    if matches.is_present("published") {
-        params.published(
-            matches
-                .value_of("published")
-                .unwrap()
-                .parse::<bool>()
-                .unwrap(),
-        );
-    }
-    if matches.is_present("alias") {
-        params.alias(matches.value_of("alias").unwrap().parse().unwrap());
-    }
-    if matches.is_present("string_match") {
-        params.string_match(matches.value_of("string_match").unwrap().parse().unwrap());
-    }
-    if matches.is_present("mute_until") {
-        params.mute_until(matches.value_of("mute_until").unwrap().parse().unwrap());
-    }
-    if matches.is_present("http_verb") {
-        params.http_verb(matches.value_of("http_verb").unwrap().parse().unwrap());
-    }
-    if matches.is_present("http_body") {
-        params.http_body(matches.value_of("http_body").unwrap().parse().unwrap());
-    }
-    if matches.is_present("disabled_locations") {
-        unimplemented!()
-        //params.disabled_locations(matches.value_of("disabled_locations").unwrap().parse().unwrap());
-    }
-    if matches.is_present("custom_headers") {
-        unimplemented!()
-        // params.custom_headers(matches.value_of("custom_headers").unwrap().parse().unwrap());
-    }
-    let params: CheckParams = params.build().unwrap();
-    params.validate();
-    Ok(params)
 }
 
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
@@ -206,4 +158,30 @@ pub struct Ssl {
     valid: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
+}
+
+fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError>  {
+    let mut parser = Parser::new();
+
+    if let Some(url) = parser.parse_value("url", matches) { params.url(url); }
+    if let Some(period) = parser.parse_value("period", matches) { params.period(period); }
+    if let Some(apdex_t) = parser.parse_value("apdex_t", matches) { params.apdex_t(apdex_t); }
+    if let Some(enabled) = parser.parse_value("enabled", matches) {params.enabled(enabled);}
+    if let Some(published) = parser.parse_value("published", matches) {params.published(published); }
+    if let Some(string_match) = parser.parse_value("string_match", matches) {params.string_match(string_match); }
+    if let Some(alias) = parser.parse_value("alias", matches) {params.alias(alias); }
+    if let Some(mute_until) = parser.parse_value("mute_until", matches) {params.mute_until(mute_until); }
+    if let Some(http_verb) = parser.parse_value("http_verb", matches) {params.http_verb(http_verb); }
+    if let Some(http_body) = parser.parse_value("http_body", matches) {params.http_body(http_body); }
+    if matches.is_present("disabled_locations") {
+        unimplemented!()
+        //params.disabled_locations(matches.value_of("disabled_locations").unwrap().parse().unwrap());
+    }
+    if matches.is_present("custom_headers") {
+        unimplemented!()
+        // params.custom_headers(matches.value_of("custom_headers").unwrap().parse().unwrap());
+    }
+    let params: CheckParams = params.build().unwrap();
+    params.validate();
+    Ok(params)
 }

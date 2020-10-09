@@ -9,6 +9,7 @@ use client::Client;
 
 use crate::messages::check::{Check, CheckParams};
 use crate::messages::downtime::DowntimeParams;
+use crate::messages::metric::{Metrics, MetricParams};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::env;
@@ -54,7 +55,7 @@ async fn main() {
 
     let subcommand_matches = matches.subcommand().1.unwrap();
     match subcommand_name {
-        "config" => match subcommand_matches.value_of("api_key") {
+        "config" => match subcommand_matches.value_of("api-key") {
             Some(k) => {
                 let api_key = k.to_string();
                 let config = config::Config {
@@ -93,10 +94,25 @@ async fn main() {
                     exit(exitcode::DATAERR)
             }
             let result =
-                &client.downtimes(token, &params.unwrap()).await;
-            println!("{:?}", result);
+                serde_json::to_string(&client.downtimes(token, &params.unwrap()).await.unwrap()).unwrap();
+            println!("{}", result);
             // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
         }
+
+        "metrics" => {
+            let client = Client::from_config().unwrap();
+            let token = subcommand_matches.value_of("token").unwrap();
+            let params = MetricParams::parse(&client.api_key, &subcommand_matches);
+            if params.is_err() {
+                println!("{}", params.err().unwrap().to_string());
+                exit(exitcode::DATAERR)
+            }
+            let result =
+                serde_json::to_string(&client.metrics(token, &params.unwrap()).await.unwrap()).unwrap();
+            println!("{}", result);
+            // let result = serde_json::to_string(&client.metrics(token, &params).await.unwrap()).unwrap();
+        }
+
 
         // ("metrics", Some(m)) => metrics(&mut client, &m).await,
 

@@ -1,5 +1,17 @@
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
+use crate::cli::{Parser, CliError};
+use clap::ArgMatches;
+
+/// Metrics represents the output of /api/checks/:token/metrics
+/// Possible return values are an array of Metric messages or an error message.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Metrics {
+    Error{error: Option<String>},
+    Metrics(Vec<Metric>)
+}
+
 
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Metric {
@@ -42,14 +54,9 @@ pub struct Timings {
 
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
 #[builder(private, setter(strip_option))]
-struct MetricParams {
-    // from [time] = 2020-09-03 20:59:51 UTC
-    // Start time, default to 1 month ago ­· supported formats ⇣
-    // to [time] = 2020-10-03 22:59:51 +0200
-    // End time, default to now ­· supported formats ⇣
-    // group [symbol]
-    // Group data by 'time' (hour) or 'host' (location)
-
+pub(crate) struct MetricParams {
+    #[serde(rename = "api-key")]
+    api_key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
     from : Option<String>,
@@ -59,4 +66,24 @@ struct MetricParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
     group : Option<String>
+}
+
+impl MetricParams {
+    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> Result<MetricParams, CliError> {
+        let mut params = MetricParamsBuilder::default();
+        let mut parser = Parser::new();
+
+        params.api_key(api_key.to_string());
+        if let Some(from) = parser.parse_value("from", matches) { params.from(from); }
+        if let Some(to) = parser.parse_value("to", matches) { params.to(to); }
+        if let Some(group) = parser.parse_value("group", matches) { params.group(group); }
+        let params: MetricParams = params.build().unwrap();
+
+        params.validate();
+        if parser.successful_parse().is_err() {
+            Err(parser.successful_parse().unwrap_err())
+        } else {
+            Ok(params)
+        }
+    }
 }

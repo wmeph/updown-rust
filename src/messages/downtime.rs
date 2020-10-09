@@ -10,10 +10,18 @@ use std::collections::HashMap;
 use std::env::Args;
 use std::str::FromStr;
 
-/// Downtime represents the output of /api/checks/:token/downtimes
+/// Downtimes represents the output of /api/checks/:token/downtimes
+/// Possible return values are an array of Downtime messages or an error message.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub(crate) enum Downtimes {
+    Error{ error : Option<String>},
+    Downtimes(Option<Vec<Downtime>>)
+}
+
 #[derive(Serialize, Validate, Deserialize, Debug)]
 pub(crate) struct Downtime {
-    id: String,
+    id: Option<String>,
     error: Option<String>,
     started_at: Option<String>,
     ended_at: Option<String>,

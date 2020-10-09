@@ -44,7 +44,7 @@ enum Subcommand {
         token: String,
 
         #[structopt(long)]
-        page: Option<i32>,
+        page: Option<u32>,
 
         #[structopt(long)]
         results: Option<bool>,

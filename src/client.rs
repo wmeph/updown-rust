@@ -2,14 +2,15 @@ use core::result::Result::Ok;
 
 use std::collections::HashMap;
 
-use crate::messages::check::{Check, CheckParams};
-use crate::messages::downtime::{Downtime, DowntimeParams};
+use crate::messages::check::{Check, CheckParams, Checks};
+use crate::messages::downtime::{Downtime, DowntimeParams, Downtimes};
 use crate::messages::MessageError;
 use crate::config::Config;
 use crate::{CHECKS_URL};
 use reqwest::{Response, Url};
 use std::process::exit;
 use confy::ConfyError;
+use crate::messages::metric::{MetricParams, Metrics};
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -25,7 +26,7 @@ pub(crate) struct Client {
 ///
 impl Client {
 
-    pub(crate) async fn all(&self) -> Result<Vec<Check>, MessageError> {
+    pub(crate) async fn all(&self) -> Result<Checks, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
         let resp = self
             .http_client
@@ -55,7 +56,7 @@ impl Client {
         &self,
         token: &str,
         params: &DowntimeParams,
-    ) -> Result<Vec<Downtime>, MessageError> {
+    ) -> Result<Downtimes, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
             Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
@@ -67,27 +68,28 @@ impl Client {
             .await?
             .json()
             .await?;
-        println!("{:#?}", resp);
         Ok(resp)
     }
 
-    // pub(crate) async fn metrics(&self, token: &str, from: &str, to: &str, group: &str) -> Result<Metrics, MessageError>{
-    //     let mut params: HashMap<&str, &str> = HashMap::new();
-    //     params.insert("api-key", self.read_only_api_key.as_str());
-    //     if from.is_some() {
-    //         params.insert("from", from);
-    //     }
-    //     if to.is_some() {
-    //         params.insert("to", to);
-    //     }
-    //     if group.is_some() {
-    //         params.insert("group", group);
-    //     }
-    //     let url =
-    //         Url::parse((CHECKS_URL.to_owned() + "/" + token + "/metrics").as_str());
-    //     let resp = self.http_client.get(url).query(&params).send().await?.json().await?;
-    //     Ok(resp)
-    // }
+
+    pub(crate) async fn metrics(
+        &self,
+        token: &str,
+        params: &MetricParams,
+    ) -> Result<Metrics, MessageError> {
+        // -> Result<HashMap<String, Downtime>, MessageError>{
+        let url =
+            Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
+        let resp = self
+            .http_client
+            .get(url)
+            .query(&params)
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(resp)
+    }
 
     pub(crate) async fn add(
         &self,
