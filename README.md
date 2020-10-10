@@ -43,7 +43,8 @@ let client = Client::from_config();
 
 ## Usage Summary
 
-`USAGE:
+```
+USAGE:
     updown [token_or_url] [SUBCOMMAND]
 
 FLAGS:
@@ -62,7 +63,7 @@ SUBCOMMANDS:
     downtimes    
     help         Prints this message or the help of the given subcommand(s)
     metrics  
-`
+```
 
 ## Examples
 
