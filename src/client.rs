@@ -10,7 +10,8 @@ use crate::{CHECKS_URL};
 use reqwest::{Response, Url};
 use std::process::exit;
 use confy::ConfyError;
-use crate::messages::metric::{MetricParams, Metrics};
+use crate::messages::metric::{MetricsParams, Metrics};
+use clap::ArgMatches;
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -74,12 +75,11 @@ impl Client {
 
     pub(crate) async fn metrics(
         &self,
-        token: &str,
-        params: &MetricParams,
+        params: &MetricsParams,
     ) -> Result<Metrics, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
-            Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
+            Url::parse((CHECKS_URL.to_owned() + "/" + params.token.as_str() + "/metrics").as_str()).unwrap();
         let resp = self
             .http_client
             .get(url)
@@ -124,7 +124,6 @@ impl Client {
         Ok(resp)
     }
 
-    //TODO define message type, hashmap won't work.
     pub(crate) async fn delete(
         &self,
         token: &str,
@@ -143,7 +142,7 @@ impl Client {
 
     pub(crate) fn new(api_key : String, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
         let mut client = Client{
-            api_key : api_key,
+            api_key,
             read_only_api_key: private_api_key.unwrap_or("".to_string()),
             user_agent: user_agent.unwrap_or("".to_string()),
             http_client: Default::default()
@@ -152,12 +151,12 @@ impl Client {
     }
 
     pub(crate) fn from_config() -> Result<Client, ConfyError> {
-        let client = match Config::load_config() {
-            Ok(config) => Client::new(config.api_key, config.private_api_key, config.user_agent),
+        let config = match Config::load_config() {
+            Ok(c) => c,
             Err(e) => return Err(e)
         };
+        let api_key = config.api_key;
+        let client= Client::new(api_key, config.private_api_key, config.user_agent);
         Ok(client)
     }
-
-
 }

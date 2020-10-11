@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::messages::metric::Metric;
+use crate::messages::metric::Metrics;
 use clap::ArgMatches;
 use std::process::exit;
 use validator::{Validate, ValidationError};
@@ -70,7 +70,7 @@ pub struct Check {
     ssl: Option<Ssl>,
 
     #[serde(skip_serializing)]
-    metrics: Option<Metric>,
+    metrics: Option<Metrics>,
 }
 
 fn validate_period(period: u32) -> Result<(), ValidationError> {
@@ -133,14 +133,14 @@ pub struct CheckParams {
 
 impl CheckParams {
     /// Parses parameters for the update request: PUT /api/checks/:token
-    pub(crate) fn parse_update(api_key: &String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
+    pub(crate) fn parse_update(api_key: &str, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         parse(params, matches)
     }
 
     /// Parses parmeters for the add request: POST /api/checks
-    pub(crate) fn parse_add(api_key: &String, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
+    pub(crate) fn parse_add(api_key: &str, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         params.url(url);

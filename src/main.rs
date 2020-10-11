@@ -9,7 +9,7 @@ use client::Client;
 
 use crate::messages::check::{Check, CheckParams};
 use crate::messages::downtime::DowntimeParams;
-use crate::messages::metric::{Metrics, MetricParams};
+use crate::messages::metric::{Metrics, MetricsParams};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::env;
@@ -35,10 +35,7 @@ mod messages;
 /// This is a bit of a mish-mash and probably needs sorting out!
 #[tokio::main]
 async fn main() {
-    // Opt::from_args();
     let matches = Updown::clap().get_matches();
-
-    //let subcommand : &str = Updown::clap().get_matches(.subcommand().0;
 
     let subcommand_name = matches.subcommand().0;
     if subcommand_name == "" {
@@ -100,17 +97,8 @@ async fn main() {
         }
 
         "metrics" => {
-            let client = Client::from_config().unwrap();
-            let token = subcommand_matches.value_of("token").unwrap();
-            let params = MetricParams::parse(&client.api_key, &subcommand_matches);
-            if params.is_err() {
-                println!("{}", params.err().unwrap().to_string());
-                exit(exitcode::DATAERR)
-            }
-            let result =
-                serde_json::to_string(&client.metrics(token, &params.unwrap()).await.unwrap()).unwrap();
-            println!("{}", result);
-            // let result = serde_json::to_string(&client.metrics(token, &params).await.unwrap()).unwrap();
+            let result = cli::metrics(subcommand_matches).await;
+            println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
         }
 
 

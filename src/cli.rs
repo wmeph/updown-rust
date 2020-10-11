@@ -5,6 +5,10 @@ use std::str::FromStr;
 use std::fmt::Debug;
 use clap::ArgMatches;
 use std::error::Error;
+use crate::messages::metric::{Metrics, MetricsParams};
+use crate::messages::MessageError;
+use crate::client::Client;
+use std::process::exit;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -240,4 +244,14 @@ quick_error! {
     pub enum  CliError{
        BadArg (message : String) { display("Failed to parse value(s) : {}", message )}
     }
+}
+
+pub(crate) async fn metrics(subcommand_matches : &ArgMatches<'_>) -> Result<Metrics, MessageError>{
+    let client = Client::from_config().unwrap();
+    let params = MetricsParams::parse(client.api_key.as_str(), &subcommand_matches);
+    if params.is_err() {
+        println!("{}", params.err().unwrap().to_string());
+        exit(exitcode::DATAERR)
+    }
+    client.metrics(&params.unwrap()).await
 }

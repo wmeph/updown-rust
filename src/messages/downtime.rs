@@ -46,7 +46,7 @@ pub(crate) struct DowntimeParams {
 }
 
 impl DowntimeParams {
-    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> Result<DowntimeParams, CliError> {
+    pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> Result<DowntimeParams, CliError> {
         let mut params = DowntimeParamsBuilder::default();
         let mut parser = Parser::new();
 
