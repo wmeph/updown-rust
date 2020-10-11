@@ -5,16 +5,8 @@ use clap::ArgMatches;
 
 /// Metrics represents the output of /api/checks/:token/metrics
 /// Possible return values are an array of Metric messages or an error message.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum Metrics {
-    Error{error: Option<String>},
-    Metrics(Vec<Metric>)
-}
-
-
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
-pub struct Metric {
+pub struct Metrics {
     #[serde(skip_serializing_if = "Option::is_none")]
     apdex: Option<f32>,
     requests: Option<Requests>,
@@ -54,7 +46,7 @@ pub struct Timings {
 
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
 #[builder(private, setter(strip_option))]
-pub(crate) struct MetricParams {
+pub(crate) struct MetricsParams {
     #[serde(rename = "api-key")]
     api_key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,16 +60,17 @@ pub(crate) struct MetricParams {
     group : Option<String>
 }
 
-impl MetricParams {
-    pub(crate) fn parse(api_key: &String, matches: &ArgMatches<'_>) -> Result<MetricParams, CliError> {
-        let mut params = MetricParamsBuilder::default();
-        let mut parser = Parser::new();
+impl MetricsParams {
+    pub(crate) fn parse(api_key: String, matches: &ArgMatches<'_>) -> Result<MetricsParams, CliError> {
+        let mut params = MetricsParamsBuilder::default();
+        let mut parser = Parser::new(matches);
 
-        params.api_key(api_key.to_string());
+
+        params.api_key(api_key);
         if let Some(from) = parser.parse_value("from", matches) { params.from(from); }
         if let Some(to) = parser.parse_value("to", matches) { params.to(to); }
         if let Some(group) = parser.parse_value("group", matches) { params.group(group); }
-        let params: MetricParams = params.build().unwrap();
+        let params: MetricsParams = params.build().unwrap();
 
         params.validate();
         if parser.successful_parse().is_err() {

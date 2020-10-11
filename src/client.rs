@@ -10,7 +10,7 @@ use crate::{CHECKS_URL};
 use reqwest::{Response, Url};
 use std::process::exit;
 use confy::ConfyError;
-use crate::messages::metric::{MetricParams, Metrics};
+use crate::messages::metric::{MetricsParams, Metrics};
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -18,8 +18,8 @@ use crate::messages::metric::{MetricParams, Metrics};
 /// The implementation defines methods that are used for the
 pub(crate) struct Client {
     pub(crate) api_key: String,
-    read_only_api_key: String,
-    user_agent: String,
+    read_only_api_key: Option<String>,
+    user_agent: Option<String>,
     http_client: reqwest::Client,
 }
 
@@ -31,7 +31,7 @@ impl Client {
         let resp = self
             .http_client
             .get(url)
-            .query(&[("api-key", self.api_key.as_str())])
+            .query(&[("api-key", self.api_key.to_string())])
             .send()
             .await?
             .json()
@@ -75,7 +75,7 @@ impl Client {
     pub(crate) async fn metrics(
         &self,
         token: &str,
-        params: &MetricParams,
+        params: &MetricsParams,
     ) -> Result<Metrics, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
@@ -83,6 +83,7 @@ impl Client {
         let resp = self
             .http_client
             .get(url)
+
             .query(&params)
             .send()
             .await?
@@ -141,23 +142,65 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) fn new(api_key : String, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
+    pub(crate) fn new(api_key : &'static str, read_only_api_key : Option<String>, user_agent : Option<String>) -> Client {
         let mut client = Client{
-            api_key : api_key,
-            read_only_api_key: private_api_key.unwrap_or("".to_string()),
-            user_agent: user_agent.unwrap_or("".to_string()),
+            api_key: api_key.to_string(),
+            read_only_api_key,
+            user_agent,
             http_client: Default::default()
         };
         client
     }
 
     pub(crate) fn from_config() -> Result<Client, ConfyError> {
-        let client = match Config::load_config() {
-            Ok(config) => Client::new(config.api_key, config.private_api_key, config.user_agent),
-            Err(e) => return Err(e)
-        };
-        Ok(client)
+        let config = Config::load_config();
+        match config {
+            Ok(config) => {
+                let key: String  = config.api_key;
+                let client = Client {
+                    api_key: key,
+                    read_only_api_key: config.private_api_key,
+                    user_agent: config.user_agent,
+                    http_client: Default::default()
+                };
+                Ok(client)
+            },
+            Err(e) => Err(e)
+        }
     }
 
 
+}
+
+pub(crate) async fn downtimes_(
+    token: &str,
+    params: &DowntimeParams,
+) -> Result<Downtimes, MessageError> {
+    let url =
+        Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
+    let resp = reqwest::Client::default()
+        .get(url)
+        .query(&params)
+        .send()
+        .await?
+        .json()
+        .await?;
+    Ok(resp)
+}
+
+pub(crate) async fn metrics_(
+    token: &str,
+    params: &MetricsParams,
+) -> Result<Metrics, MessageError> {
+    // -> Result<HashMap<String, Downtime>, MessageError>{
+    let url =
+        Url::parse((CHECKS_URL.to_owned() + "/" + token + "/metrics").as_str()).unwrap();// + params.api_key.as_str()).as_str()).unwrap();
+    let resp = reqwest::Client::new().get(url)
+        .query(params)
+        .send()
+        .await?
+        .json()
+        .await?;
+    println!("{:?}", resp);
+    Ok(resp)
 }

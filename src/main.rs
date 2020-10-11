@@ -8,18 +8,15 @@ use cli::Updown;
 use client::Client;
 
 use crate::messages::check::{Check, CheckParams};
-use crate::messages::downtime::DowntimeParams;
-use crate::messages::metric::{Metrics, MetricParams};
+use crate::messages::downtime::{DowntimeParams, DowntimeParamsBuilder, Downtimes, Downtimes::Data, Downtimes::Error};
+use crate::messages::metric::{Metrics, MetricsParams};
 use serde::{Deserialize, Serialize};
-use std::default::Default;
-use std::env;
 use std::process::exit;
 use structopt::StructOpt;
 use validator::ValidationErrors;
-use std::str::FromStr;
 use crate::config::Config;
 use confy::ConfyError;
-use std::error::Error;
+use crate::client::{downtimes_, metrics_};
 
 extern crate clap;
 extern crate exitcode;
@@ -35,16 +32,34 @@ mod messages;
 /// This is a bit of a mish-mash and probably needs sorting out!
 #[tokio::main]
 async fn main() {
-    // Opt::from_args();
+    let mut p: DowntimeParams = DowntimeParams::new("SZCehfLagQVXX5pcnZfi", "v9et");
+    p.page(1);
+    // let params : DowntimeParams = DowntimeParams::new("SZCehfLagQVXX5pcnZfi", None, Some(true), None).unwrap();
+
+    //
+    let client = match Client::from_config() {
+        Ok(c) => c,
+        Err(e) => exit(exitcode::CONFIG)
+    };
+
+    // The result will be of type Result<Downtimes, MessageError>
+    // let result = client.downtimes("v9et", &p).await;
+    // let downtimes = match result {
+    //     Ok(downtimes) => {
+    //         match downtimes {
+    //             Data(d) => Ok(d),
+    //             Error{error: e} => Err(e)
+    //         }
+    //     },
+    //     Err(e) => exit(exitcode::IOERR)
+    // };
+    // println!("{:?}", downtimes);
+
     let matches = Updown::clap().get_matches();
-
-    //let subcommand : &str = Updown::clap().get_matches(.subcommand().0;
-
     let subcommand_name = matches.subcommand().0;
     if subcommand_name == "" {
-        println!("Nowt");
         if matches.is_present("token_or_url")  {
-            println!("token");
+            println!("TODO: do something meaningful with the token");
             exit(exitcode::OK);
         }
         else {
@@ -57,9 +72,9 @@ async fn main() {
     match subcommand_name {
         "config" => match subcommand_matches.value_of("api-key") {
             Some(k) => {
-                let api_key = k.to_string();
+                let api_key = k;
                 let config = config::Config {
-                    api_key,
+                    api_key: k.to_string(),
                     private_api_key: None,
                     user_agent: None,
                 };
@@ -76,6 +91,7 @@ async fn main() {
             let result = serde_json::to_string(&client.all().await.unwrap()).unwrap();
             println!("{}", result);
         }
+
         "check" => {
             let client = Client::from_config().unwrap();
             let metrics = subcommand_matches.is_present("metrics");
@@ -88,33 +104,32 @@ async fn main() {
         "downtimes" => {
             let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
-            let params = DowntimeParams::parse(&client.api_key, &subcommand_matches);
+            let params = DowntimeParams::parse(token, client, &subcommand_matches);
             if params.is_err() {
                     println!("{}", params.err().unwrap().to_string());
                     exit(exitcode::DATAERR)
             }
-            let result =
-                serde_json::to_string(&client.downtimes(token, &params.unwrap()).await.unwrap()).unwrap();
+            let value = downtimes_(token, &params.unwrap()).await.unwrap();
+            let result = serde_json::to_string(&value).unwrap();
             println!("{}", result);
-            // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
         }
 
         "metrics" => {
-            let client = Client::from_config().unwrap();
+            let config = Config::load_config();
+            if config.is_err() {
+                println!("{}", config.err().unwrap().to_string());
+                exit(exitcode::CONFIG);
+            }
             let token = subcommand_matches.value_of("token").unwrap();
-            let params = MetricParams::parse(&client.api_key, &subcommand_matches);
+            let params = MetricsParams::parse(config.unwrap().api_key, &subcommand_matches);
             if params.is_err() {
                 println!("{}", params.err().unwrap().to_string());
-                exit(exitcode::DATAERR)
+                exit(exitcode::DATAERR);
             }
-            let result =
-                serde_json::to_string(&client.metrics(token, &params.unwrap()).await.unwrap()).unwrap();
+            let value = metrics_(token, &params.unwrap()).await.unwrap();
+            let result = serde_json::to_string(&value).unwrap();
             println!("{}", result);
-            // let result = serde_json::to_string(&client.metrics(token, &params).await.unwrap()).unwrap();
         }
-
-
-        // ("metrics", Some(m)) => metrics(&mut client, &m).await,
 
         "add" => {
             let client = Client::from_config().unwrap();
@@ -124,16 +139,18 @@ async fn main() {
             let result = serde_json::to_string(&client.add(&params).await.unwrap()).unwrap();
             println!("{}", result);
         }
+
         "update" => {
             let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
-            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches)
-                .unwrap();
-
-            let result =
-                serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
-            println!("{}", result);
+            // let params = CheckParams::parse_update(client.api_key, &subcommand_matches)
+            //     .unwrap();
+            //
+            // let result =
+            //     serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
+            // println!("{}", result);
         }
+
         "delete" => {
             let client = Client::from_config().unwrap();
             let token = subcommand_matches.value_of("token").unwrap();
@@ -158,14 +175,5 @@ quick_error! {
     }
 }
 
-///TODO This should probably be handled by a CLI-specific error type
-fn print_errors(e: ValidationErrors) {
-    for (k, v) in e.field_errors() {
-        println!(
-            "Validation error for field {:#?} : {} ({} given)",
-            k, v[0].code, v[0].params["value"]
-        );
-    }
-}
 
 const CHECKS_URL: &'static str = "https://updown.io/api/checks";

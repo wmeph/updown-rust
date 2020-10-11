@@ -191,15 +191,16 @@ enum Subcommand {
     },
 }
 
-#[derive(Default)]
-pub(crate) struct Parser {
+pub(crate) struct Parser<'a> {
+    matches : &'a ArgMatches<'a>,
     pub(crate) parse_errors : Vec<String>,
     pub(crate) successful_parse : bool
 }
 
-impl Parser {
-    pub(crate) fn new() -> Parser {
+impl Parser<'_> {
+    pub(crate) fn new<'a>(matches : &'a ArgMatches) -> Parser<'a> {
         Parser {
+            matches : matches,
             parse_errors: vec![],
             successful_parse : true
         }
@@ -213,7 +214,7 @@ impl Parser {
         }
     }
 
-    pub(crate) fn parse_value<T>(&mut self, key: &str, matches: &ArgMatches<'_>) -> Option<T>
+    pub(crate) fn parse_value<T>(&mut self, key: &'static str, matches: &ArgMatches<'_>) -> Option<T>
         where T: FromStr, T::Err: Debug {
         let result = matches.value_of(key);
         match &result {
@@ -222,7 +223,7 @@ impl Parser {
                 match v {
                     Ok(m) => Option::from(m),
                     Err(e) => {
-                        self.parse_errors.push(format!("page ({} given)", matches.value_of("page").unwrap()));
+                        self.parse_errors.push(format!("page ({} given)", matches.value_of(key).unwrap()));
                         self.successful_parse = false;
                         None
                     }
