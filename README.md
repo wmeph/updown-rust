@@ -1,7 +1,7 @@
 # updown-rust
 A Rust client for [updown.io](https://updown.io), with added CLI 
 
-This requires an API key for an active updown.io account in order to work. 
+This requires an API key for an active updown.io account in order to work.
 
 # API
 
@@ -17,35 +17,33 @@ The messages are all serializable to JSON.
 
 ## Examples
 
+### Create a Client with keys and user agent (with no user details)
+```rust
+let client = Client::new("your-public-api-key", Option::from("your-private-api-key"), None);
+```
 
 ### Create a Client from a config
 
-TODO (API is still not very nice!) 
+```rust
+let client = Client::from_config();
+```
 
-### Send a request for downtimes from a client
+### Send a request for downtimes from a Client
 
-TODO (Client methods are coupled to arg params, which must be fixed!)
+```rust
+
+```
 
 # CLI summary
 
  + Use `updown` + a subcommand [+parameters] to perform requests.
- + Available parameters must be specified in long-form. The names correspond to the parameters listed in the [updown API](https://updown.io/api).
+ + Available parameters must be specified in long-form (i.e. --parameter, not -p). The names correspond to the parameters listed in the [updown API](https://updown.io/api).
  + The response is given in full in JSON. No pretty-printing options or verbosity level is offered yet, but they're on the TODO list.
 
-## Examples
 
-### Configure settings for a new API key
+## Usage Summary
 
-`updown config :API_KEY`
-
-### Update the period and change the alias
-
-`updown update :TOKEN --period=3600 --alias="my new alias"`
-
-### Inspect all available checks
-
-`updown all`
-
+```
 USAGE:
     updown [token_or_url] [SUBCOMMAND]
 
@@ -65,6 +63,31 @@ SUBCOMMANDS:
     downtimes    
     help         Prints this message or the help of the given subcommand(s)
     metrics  
+```
+
+## Examples
+
+### Configure settings for a new API key
+
+`updown config :API_KEY`
+
+This will update the configuration file used by updown-rust, or it will create one if it doesn't exist. The details are handed off to [confy](https://docs.rs/confy/0.4.0/confy/)
+
+### Update the period and change the alias
+
+<pre>updown update <b>your-token</b> --period=3600 --alias="my new alias"
+{"token":"v9et","url":"https://www.some_url_or_other.com","alias":"something or other","period":3600,"apdex_t":0.25,"string_match":"","enabled":true,"published":false,"disabled_locations":[],"last_check_at":"2020-10-10T00:25:42Z","custom_headers":{},"http_verb":"GET/HEAD"}</pre>
+
+### Inspect all available checks
+
+<pre> updown all
+[{"token":<b>"your-token"</b>,"url":"http://10.255.255.1/","period":3600,"apdex_t":0.5,"enabled":true,
+"published":false,"disabled_locations":[],"last_check_at":"2020-10-09T21:20:39Z",
+"custom_headers":{},"http_verb":"GET/HEAD"},{"token":"v9et","url":"https://www.theatlantic.com/",
+"alias":"theatlantic","period":3600,"apdex_t":0.25,"string_match":"","enabled":true,
+"published":false,"disabled_locations":[],"last_check_at":"2020-10-09T21:26:28Z",
+"+"custom_headers":{},"http_verb":"GET/HEAD"}]`
+</pre>
 
 
 
