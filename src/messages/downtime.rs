@@ -4,7 +4,7 @@ use std::process::exit;
 use validator::{Validate, ValidationError};
 use std::error::Error;
 use crate::messages::{MessageError};
-use crate::cli::{Parser, CliError};
+use crate::command::{Parser, CliError};
 use std::string::ParseError;
 use std::collections::HashMap;
 use std::env::Args;
@@ -34,6 +34,8 @@ pub(crate) struct Downtime {
 pub(crate) struct DowntimeParams {
     #[serde(rename = "api-key")]
     api_key: String,
+    #[serde(skip)]
+    pub(crate) token : String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
     page: Option<u32>,
@@ -48,12 +50,13 @@ pub(crate) struct DowntimeParams {
 impl DowntimeParams {
     pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> Result<DowntimeParams, CliError> {
         let mut params = DowntimeParamsBuilder::default();
-        let mut parser = Parser::new();
+        let mut parser = Parser::new(matches);
 
         params.api_key(api_key.to_string());
-        if let Some(page) = parser.parse_value("page", matches) { params.page(page); }
-        if let Some(results) = parser.parse_value("results", matches) { params.results(results); }
-        if let Some(group) = parser.parse_value("group", matches) { params.group(group); }
+        params.token(parser.parse_value("token").unwrap());
+        if let Some(page) = parser.parse_value("page") { params.page(page); }
+        if let Some(results) = parser.parse_value("results") { params.results(results); }
+        if let Some(group) = parser.parse_value("group") { params.group(group); }
         let params: DowntimeParams = params.build().unwrap();
 
         params.validate();

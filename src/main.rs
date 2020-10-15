@@ -4,7 +4,7 @@ extern crate quick_error;
 use crate::validator::Validate;
 use clap::ArgMatches;
 
-use cli::Updown;
+use command::Updown;
 use client::Client;
 
 use crate::messages::check::{Check, CheckParams};
@@ -20,6 +20,8 @@ use std::str::FromStr;
 use crate::config::Config;
 use confy::ConfyError;
 use std::error::Error;
+use crate::messages::MessageError;
+use std::future::Future;
 
 extern crate clap;
 extern crate exitcode;
@@ -27,7 +29,7 @@ extern crate validator;
 #[macro_use]
 extern crate derive_builder;
 
-mod cli;
+mod command;
 mod client;
 mod config;
 mod messages;
@@ -83,43 +85,26 @@ async fn main() {
         }
 
         "downtimes" => {
-            let client = Client::from_config().unwrap();
-            let token = subcommand_matches.value_of("token").unwrap();
-            let params = DowntimeParams::parse(&client.api_key, &subcommand_matches);
-            if params.is_err() {
-                    println!("{}", params.err().unwrap().to_string());
-                    exit(exitcode::DATAERR)
-            }
-            let result =
-                serde_json::to_string(&client.downtimes(token, &params.unwrap()).await.unwrap()).unwrap();
-            println!("{}", result);
-            // let result = serde_json::to_string(&client.downtimes(token, &params).await.unwrap()).unwrap();
-        }
-
-        "metrics" => {
-            let result = cli::metrics(subcommand_matches).await;
+            let result = command::downtimes(subcommand_matches).await;
             println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
         }
 
-
-        // ("metrics", Some(m)) => metrics(&mut client, &m).await,
+        "metrics" => {
+            let result = command::metrics(subcommand_matches).await;
+            println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
+        }
 
         "add" => {
-            let client = Client::from_config().unwrap();
-            let url = subcommand_matches.value_of("url").unwrap();
-            let params =
-                CheckParams::parse_add(&client.api_key, url.to_string(), &subcommand_matches).unwrap();
-            let result = serde_json::to_string(&client.add(&params).await.unwrap()).unwrap();
-            println!("{}", result);
+            let result = command::add(subcommand_matches).await;
+            println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
         }
         "update" => {
             let client = Client::from_config().unwrap();
-            let token = subcommand_matches.value_of("token").unwrap();
             let params = CheckParams::parse_update(&client.api_key, &subcommand_matches)
                 .unwrap();
 
             let result =
-                serde_json::to_string(&client.update(token, &params).await.unwrap()).unwrap();
+                serde_json::to_string(&client.update(&params).await.unwrap()).unwrap();
             println!("{}", result);
         }
         "delete" => {
@@ -131,6 +116,13 @@ async fn main() {
 
         _ => unimplemented!(),
     }
+}
+
+fn command <F, T> (f :  impl FnOnce (ArgMatches<'_>) -> F, m : &ArgMatches)
+where F : Future<Output = Result<T, MessageError>>,
+      T : Serialize + Sized
+{
+
 }
 
 quick_error! {

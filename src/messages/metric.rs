@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
-use crate::cli::{Parser, CliError};
+use crate::command::{Parser, CliError};
 use clap::ArgMatches;
 
 /// Metrics represents the output of /api/checks/:token/metrics
@@ -65,13 +65,13 @@ pub(crate) struct MetricsParams {
 impl MetricsParams {
     pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> Result<MetricsParams, CliError> {
         let mut params = MetricsParamsBuilder::default();
-        let mut parser = Parser::new();
+        let mut parser = Parser::new(matches);
 
         params.api_key(api_key.to_string());
-        params.token(parser.parse_value("token", matches).unwrap());
-        if let Some(from) = parser.parse_value("from", matches) { params.from(from); }
-        if let Some(to) = parser.parse_value("to", matches) { params.to(to); }
-        if let Some(group) = parser.parse_value("group", matches) { params.group(group); }
+        params.token(parser.parse_value("token").unwrap());
+        if let Some(from) = parser.parse_value("from") { params.from(from); }
+        if let Some(to) = parser.parse_value("to") { params.to(to); }
+        if let Some(group) = parser.parse_value("group") { params.group(group); }
         let params: MetricsParams = params.build().unwrap();
 
         params.validate();

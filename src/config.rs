@@ -21,23 +21,3 @@ impl Config {
         confy::load("updown-rust")
     }
 }
-
-// impl Config {
-//     pub fn new(api_key: String) -> Config {
-//         Config {
-//             api_key,
-//             private_api_key: None,
-//             user_agent: None
-//         }
-//     }
-//
-//     pub fn private_api_key<'a>(&'a mut self, key : String) -> &'a mut Config {
-//         self.private_api_key = Option::from(key);
-//         self
-//     }
-//
-//     pub fn user_agent<'a>(&'a mut self, user_agent: String) -> &'a mut Config {
-//         self.user_agent = Option::from(user_agent);
-//         self
-//     }
-// }

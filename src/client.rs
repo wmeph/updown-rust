@@ -12,6 +12,7 @@ use std::process::exit;
 use confy::ConfyError;
 use crate::messages::metric::{MetricsParams, Metrics};
 use clap::ArgMatches;
+use crate::command::CliError;
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -55,12 +56,11 @@ impl Client {
 
     pub(crate) async fn downtimes(
         &self,
-        token: &str,
         params: &DowntimeParams,
     ) -> Result<Downtimes, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
-            Url::parse((CHECKS_URL.to_owned() + "/" + token + "/downtimes").as_str()).unwrap();
+            Url::parse((CHECKS_URL.to_owned() + "/" + params.token.as_str() + "/downtimes").as_str()).unwrap();
         let resp = self
             .http_client
             .get(url)
@@ -109,10 +109,9 @@ impl Client {
 
     pub(crate) async fn update(
         &self,
-        token: &str,
         params: &CheckParams,
     ) -> Result<Check, MessageError> {
-        let url = Url::parse((CHECKS_URL.to_owned() + "/" + token).as_str()).unwrap();
+        let url = Url::parse((CHECKS_URL.to_owned() + "/" + &params.token.as_str()).as_str()).unwrap();
         let resp = self
             .http_client
             .put(url)
