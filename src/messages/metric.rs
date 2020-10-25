@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationErrors, ValidationError};
-use crate::command::{Parser, CliError};
+use validator::Validate;
 use clap::ArgMatches;
 
 /// Metrics represents the output of /api/checks/:token/metrics

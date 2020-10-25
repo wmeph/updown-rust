@@ -5,10 +5,8 @@ use std::collections::HashMap;
 use crate::messages::check::{Check, CheckParams, Checks};
 use crate::messages::downtime::{DowntimeParams, Downtimes};
 use crate::messages::MessageError;
-use crate::config::Config;
 use crate::{CHECKS_URL};
 use reqwest::Url;
-use confy::ConfyError;
 use crate::messages::metric::{MetricsParams, Message};
 
 /// Client is the API entry point.
@@ -53,11 +51,11 @@ impl Client<'_> {
 
     pub async fn downtimes(
         &self,
-        params: &DowntimeParams,
+        params: &DowntimeParams<'_>,
     ) -> Result<Downtimes, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
-            Url::parse((CHECKS_URL.to_owned() + "/" + params.token.as_str() + "/downtimes").as_str()).unwrap();
+            Url::parse((CHECKS_URL.to_owned() + "/" + params.token + "/downtimes").as_str()).unwrap();
         let resp = self
             .http_client
             .get(url)
@@ -81,22 +79,6 @@ impl Client<'_> {
             .http_client
             .get(url)
             .query(&params)
-            .send()
-            .await?
-            .json()
-            .await?;
-        Ok(resp)
-    }
-
-    pub async fn add(
-        &self,
-        params: &CheckParams,
-    ) -> Result<Check, MessageError> {
-        let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
-        let resp = self
-            .http_client
-            .post(url)
-            .json(&params)
             .send()
             .await?
             .json()
@@ -145,5 +127,4 @@ impl Client<'_> {
         };
         client
     }
-
 }

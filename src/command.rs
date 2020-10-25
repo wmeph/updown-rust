@@ -9,7 +9,6 @@ use crate::messages::downtime::{DowntimeParams, Downtimes};
 use crate::messages::check::{CheckParams, Check};
 use serde::export::fmt::Display;
 use crate::config::Config;
-use std::process::exit;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -211,14 +210,6 @@ impl Parser<'_> {
         }
     }
 
-    pub(crate) fn successful_parse(&self) -> Result<(), CliError> {
-        if !self.successful_parse {
-            Err(CliError::BadArg(self.parse_errors.join("\n")))
-        } else {
-            Ok(())
-        }
-    }
-
     pub(crate) fn parse_value<T>(&mut self, key: &str) -> Option<T>
         where T: FromStr, T::Err: Debug + Display {
         let result = self.matches.value_of(key);
@@ -265,10 +256,7 @@ pub(crate) async fn metrics<'r,'s>(config: Config, subcommand_matches : &ArgMatc
 pub(crate) async fn downtimes(config: Config, subcommand_matches : &ArgMatches<'_>) -> Result<Downtimes, MessageError> {
     let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
     let params = DowntimeParams::parse(client.api_key, &subcommand_matches);
-    match params {
-        Ok(p)=> client.downtimes(&p).await,
-        Err(e) => Err(MessageError::CommandFailed(e))
-    }
+    client.downtimes(&params).await
 }
 
 pub(crate) async fn add(config: Config, subcommand_matches : &ArgMatches<'_>) -> Result<Check, MessageError> {
@@ -277,16 +265,6 @@ pub(crate) async fn add(config: Config, subcommand_matches : &ArgMatches<'_>) ->
     match params {
         Ok(p)=> client.update(&p).await,
         Err(e) => Err(MessageError::CommandFailed(e))
-    }
-}
-
-pub(crate) fn config() -> Config {
-    match Config::load_config(){
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error {}", e);
-            exit(exitcode::CONFIG);
-        }
     }
 }
 

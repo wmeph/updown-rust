@@ -2,7 +2,6 @@
 extern crate quick_error;
 
 use command::Updown;
-use command::config;
 use client::Client;
 use config::Config;
 
@@ -11,8 +10,6 @@ use std::process::exit;
 use structopt::StructOpt;
 use validator::ValidationErrors;
 use confy::ConfyError;
-use crate::messages::metric::MetricsParams;
-use messages::metric::MetricsParamsBuilder;
 
 
 extern crate clap;
@@ -40,8 +37,13 @@ async fn main() {
                     private_api_key: None,
                     user_agent: None,
                 };
-                confy::store("updown-rust", config);
-                exit(exitcode::OK);
+                match confy::store("updown-rust", config) {
+                    Ok(_c) => exit(exitcode::OK),
+                    Err(e) => {
+                        eprintln!("Failed to save config {}", e.to_string());
+                        exit(exitcode::IOERR)
+                    }
+                };
             }
             None => {
                 println!("No api key provided. Exiting.");
@@ -55,7 +57,7 @@ async fn main() {
         exit(exitcode::NOINPUT);
     }
 
-    let mut config;
+    let config;
     match Config::load_config(){
         Ok(c) => {
             config = c;

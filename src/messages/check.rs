@@ -140,14 +140,6 @@ impl CheckParams {
         CheckParams::parse(params, matches)
     }
 
-    /// Parses parmeters for the add request: POST /api/checks
-    pub(crate) fn parse_add(api_key: &str, url: String, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
-        let mut params = CheckParamsBuilder::default();
-        params.api_key(api_key.to_string());
-        params.url(url);
-        CheckParams::parse(params, matches)
-    }
-
     pub(crate) fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError>  {
         let mut parser = Parser::new(matches);
         let token : String = parser.parse_value("token").unwrap();

@@ -1,7 +1,7 @@
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError, ValidationErrors};
-use crate::command::{Parser, CliError};
+use validator::Validate;
+use crate::command::Parser;
 
 /// Downtimes represents the output of /api/checks/:token/downtimes
 /// Possible return values are an array of Downtime messages or an error message.
@@ -24,11 +24,11 @@ pub(crate) struct Downtime {
 /// DowntimeParams represents the parameters sent to /api/checks/:token/downtimes
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
 #[builder(private, setter(strip_option))]
-pub(crate) struct DowntimeParams {
+pub(crate) struct DowntimeParams<'a> {
     #[serde(rename = "api-key")]
-    api_key: String,
+    api_key: &'a str,
     #[serde(skip)]
-    pub(crate) token : String,
+    pub(crate) token : &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
     page: Option<u32>,
@@ -38,23 +38,15 @@ pub(crate) struct DowntimeParams {
 
 }
 
-impl DowntimeParams {
-    pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> Result<DowntimeParams, CliError> {
+impl DowntimeParams<'_> {
+    pub(crate) fn parse<'a>(api_key: &'a str, matches: &'a ArgMatches<'_>) -> DowntimeParams<'a> {
         let mut params = DowntimeParamsBuilder::default();
         let mut parser = Parser::new(matches);
 
-        params.api_key(api_key.to_string());
-        params.token(parser.parse_value("token").unwrap());
+        params.api_key(api_key);
+        params.token(matches.value_of("token").unwrap());
         if let Some(page) = parser.parse_value("page") { params.page(page); }
         if let Some(results) = parser.parse_value("results") { params.results(results); }
-        let params: DowntimeParams = params.build().unwrap();
-
-        let validation_result : Result<(), ValidationErrors> = params.validate();
-        match validation_result {
-            Ok(()) => Ok(params),
-            errors => {
-                Err(CliError::BadArg("Unknown error".to_string()))
-            }
-        }
+        params.build().unwrap()
     }
 }
