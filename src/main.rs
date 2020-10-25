@@ -4,6 +4,7 @@ extern crate quick_error;
 use command::Updown;
 use client::Client;
 use config::Config;
+use messages::metric::MetricsParamsBuilder;
 
 use crate::messages::check::CheckParams;
 use std::process::exit;
@@ -28,8 +29,10 @@ mod messages;
 async fn main() {
     let matches = Updown::clap().get_matches();
     let subcommand_name = matches.subcommand().0;
+    let subcommand_matches = matches.subcommand().1.unwrap();
+
     if subcommand_name == "config" {
-        match matches.value_of("api-key") {
+        match subcommand_matches.value_of("api-key") {
             Some(k) => {
                 let api_key = k;
                 let config = config::Config {
@@ -68,7 +71,7 @@ async fn main() {
         }
     }
     
-    let subcommand_matches = matches.subcommand().1.unwrap();
+
     match subcommand_name {
 
         "all" => {
