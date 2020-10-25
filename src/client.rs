@@ -3,37 +3,34 @@ use core::result::Result::Ok;
 use std::collections::HashMap;
 
 use crate::messages::check::{Check, CheckParams, Checks};
-use crate::messages::downtime::{Downtime, DowntimeParams, Downtimes};
+use crate::messages::downtime::{DowntimeParams, Downtimes};
 use crate::messages::MessageError;
 use crate::config::Config;
 use crate::{CHECKS_URL};
-use reqwest::{Response, Url};
-use std::process::exit;
+use reqwest::Url;
 use confy::ConfyError;
-use crate::messages::metric::{MetricsParams, Metrics};
-use clap::ArgMatches;
-use crate::command::CliError;
+use crate::messages::metric::{MetricsParams, Message};
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
 /// The read-only key is used internally for GET requests, the full key for POST and PUT requests.
 /// The implementation defines methods that are used for the
-pub(crate) struct Client {
-    pub(crate) api_key: String,
+pub(crate) struct Client<'a> {
+    pub(crate) api_key: &'a str,
     read_only_api_key: String,
     user_agent: String,
     http_client: reqwest::Client,
 }
 
 ///
-impl Client {
+impl Client<'_> {
 
-    pub(crate) async fn all(&self) -> Result<Checks, MessageError> {
+    pub async fn all(&self) -> Result<Checks, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned()).as_str()).unwrap();
         let resp = self
             .http_client
             .get(url)
-            .query(&[("api-key", self.api_key.as_str())])
+            .query(&[("api-key", self.api_key)])
             .send()
             .await?
             .json()
@@ -41,10 +38,10 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn check(&self, token: &str, metrics: bool) -> Result<Check, MessageError> {
+    pub async fn check(&self, token: &str, metrics: bool) -> Result<Check, MessageError> {
         // TODO build the request parameters in a separate function
         let mut params: HashMap<&str, &str> = HashMap::new();
-        params.insert("api-key", self.api_key.as_str());
+        params.insert("api-key", self.api_key);
         if metrics {
             params.insert("metrics", "true");
         }
@@ -54,7 +51,7 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn downtimes(
+    pub async fn downtimes(
         &self,
         params: &DowntimeParams,
     ) -> Result<Downtimes, MessageError> {
@@ -73,13 +70,13 @@ impl Client {
     }
 
 
-    pub(crate) async fn metrics(
+    pub async fn metrics(
         &self,
-        params: &MetricsParams,
-    ) -> Result<Metrics, MessageError> {
+        params: &MetricsParams<'_>,
+    ) -> Result<Message, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
-            Url::parse((CHECKS_URL.to_owned() + "/" + params.token.as_str() + "/metrics").as_str()).unwrap();
+            Url::parse((CHECKS_URL.to_owned() + "/" + params.token + "/metrics").as_str()).unwrap();
         let resp = self
             .http_client
             .get(url)
@@ -91,7 +88,7 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn add(
+    pub async fn add(
         &self,
         params: &CheckParams,
     ) -> Result<Check, MessageError> {
@@ -107,7 +104,7 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn update(
+    pub async fn update(
         &self,
         params: &CheckParams,
     ) -> Result<Check, MessageError> {
@@ -123,7 +120,7 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) async fn delete(
+    pub async fn delete(
         &self,
         token: &str,
     ) -> Result<HashMap<String, String>, MessageError> {
@@ -131,7 +128,7 @@ impl Client {
         let resp = self
             .http_client
             .delete(url)
-            .query(&[("api-key", self.api_key.as_str())])
+            .query(&[("api-key", self.api_key)])
             .send()
             .await?
             .json()
@@ -139,23 +136,14 @@ impl Client {
         Ok(resp)
     }
 
-    pub(crate) fn new(api_key : String, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
-        let mut client = Client{
+    pub fn new(api_key : &str, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
+        let client = Client{
             api_key,
-            read_only_api_key: private_api_key.unwrap_or("".to_string()),
+            read_only_api_key: private_api_key.unwrap_or(String::from("")),
             user_agent: user_agent.unwrap_or("".to_string()),
             http_client: Default::default()
         };
         client
     }
 
-    pub(crate) fn from_config() -> Result<Client, ConfyError> {
-        let config = match Config::load_config() {
-            Ok(c) => c,
-            Err(e) => return Err(e)
-        };
-        let api_key = config.api_key;
-        let client= Client::new(api_key, config.private_api_key, config.user_agent);
-        Ok(client)
-    }
 }

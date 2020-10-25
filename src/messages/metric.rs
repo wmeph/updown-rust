@@ -1,12 +1,21 @@
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError};
+use validator::{Validate, ValidationErrors, ValidationError};
 use crate::command::{Parser, CliError};
 use clap::ArgMatches;
 
 /// Metrics represents the output of /api/checks/:token/metrics
-/// Possible return values are an array of Metric messages or an error message.
+/// Possible return values are a Metric message or an error message.
+///
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub(crate) enum Metrics {
+    Error{ error : Option<String>},
+    Metrics(Option<Message>)
+}
+
+
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
-pub struct Metrics {
+pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     apdex: Option<f32>,
     requests: Option<Requests>,
@@ -45,40 +54,31 @@ pub struct Timings {
 }
 
 #[derive(Clone, Validate, Serialize, Deserialize, Debug, Default, Builder)]
-#[builder(private, setter(strip_option))]
-pub(crate) struct MetricsParams {
+#[builder(setter(strip_option))]
+pub(crate) struct MetricsParams<'a> {
     #[serde(rename = "api-key")]
-    api_key: String,
+    api_key: &'a str,
     #[serde(skip)]
-    pub(crate) token : String,
+    pub(crate) token : &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    from : Option<String>,
+    from : Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    to : Option<String>,
+    to : Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    group : Option<String>
+    group: Option<&'a str>,
 }
 
-impl MetricsParams {
-    pub(crate) fn parse(api_key: &str, matches: &ArgMatches<'_>) -> Result<MetricsParams, CliError> {
+impl MetricsParams<'_> {
+    pub(crate) fn parse<'a>(api_key: &'a str, matches: &'a ArgMatches<'_>) -> MetricsParams<'a> {
         let mut params = MetricsParamsBuilder::default();
-        let mut parser = Parser::new(matches);
-
-        params.api_key(api_key.to_string());
-        params.token(parser.parse_value("token").unwrap());
-        if let Some(from) = parser.parse_value("from") { params.from(from); }
-        if let Some(to) = parser.parse_value("to") { params.to(to); }
-        if let Some(group) = parser.parse_value("group") { params.group(group); }
-        let params: MetricsParams = params.build().unwrap();
-
-        params.validate();
-        if parser.successful_parse().is_err() {
-            Err(parser.successful_parse().unwrap_err())
-        } else {
-            Ok(params)
-        }
+        params.api_key(api_key);
+        params.token(matches.value_of("token").unwrap());
+        if let Some(from) = matches.value_of("from") { params.from(from); }
+        if let Some(to) = matches.value_of("to") { params.to(to); }
+        if let Some(group) = matches.value_of("group") { params.group(group); }
+        params.build().unwrap()
     }
 }
