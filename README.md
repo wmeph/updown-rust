@@ -3,36 +3,9 @@ A Rust client for [updown.io](https://updown.io), with added CLI
 
 This requires an API key for an active updown.io account in order to work.
 
-# API
+Build it with [cargo](https://doc.rust-lang.org/cargo/commands/cargo-build.html). The executable (in /target/release or /target/debug) can be put in your path for the CLI.
 
-The API is subject to change, but it provides:
-
- + Structs for the messages used in the different HTTP requests and responses as defined in [the updown API](https://updown.io/api).
- + A Configuration struct to hold references to keys
- + A Client struct with methods to call the different HTTP requests used for the different updown API functions
- 
-The Client requires an API key that may be entered programatically or may come from a config file (handled by [confy](https://docs.rs/confy/0.4.0/confy). A read-only key can also be supplied, though it's not used at the moment.
-
-The messages are all serializable to JSON. 
-
-## Examples
-
-### Create a Client with keys and user agent (with no user details)
-```rust
-let client = Client::new("your-public-api-key", Option::from("your-private-api-key"), None);
-```
-
-### Create a Client from a config
-
-```rust
-let client = Client::from_config();
-```
-
-### Send a request for downtimes from a Client
-
-```rust
-
-```
+This isn't yet available as a library, but that is on the todo list!
 
 # CLI summary
 
@@ -88,6 +61,61 @@ This will update the configuration file used by updown-rust, or it will create o
 "published":false,"disabled_locations":[],"last_check_at":"2020-10-09T21:26:28Z",
 "+"custom_headers":{},"http_verb":"GET/HEAD"}]`
 </pre>
+
+
+# API
+
+This is definitely not properly done yet!
+
+The API is subject to change, but it provides:
+
+ + Structs for the messages used in the different HTTP requests and responses as defined in [the updown API](https://updown.io/api).
+ + A Configuration struct to hold references to keys
+ + A Client struct with methods to call the different HTTP requests used for the different updown API functions
+ 
+The Client requires an API key that may be entered programatically or may come from a config file (handled by [confy](https://docs.rs/confy/0.4.0/confy). A read-only key can also be supplied, though it's not used at the moment.
+
+The messages are all serializable to JSON. 
+
+## Examples
+
+### Create a Client with keys and user agent (with no user details)
+```rust
+let client = Client::new("your-public-api-key", Option::from("your-private-api-key"), None);
+```
+
+### Ask for Metrics
+```rust
+let params = MetricsParamsBuilder::default()
+        .api_key(client.api_key)
+        .token("your-token")
+        .build().unwrap();
+let mut result = client.metrics(&params);
+    let metrics = result.await.unwrap();
+    println!("{:?}", serde_json::to_string(&metrics));
+```
+
+### Create a Client from a config
+```rust
+let config = ConfigBuilder::default().api_key(String::from("x6SyrW1Qnrn1sqyhyTqA")).build();
+// Maybe unwrap the config, or match the result
+let client = Client::new(&config.api_key, None, None);
+// Use the client as above
+```
+
+### Ask for Downtimes
+
+```rust
+let params = DowntimesParamsBuilder::default()
+        .api_key(client.api_key)
+        .token("your-token")
+        .build().unwrap();
+let mut result = client.downtimes(&params);
+    let downtimes = result.await.unwrap();
+    println!("{:?}", serde_json::to_string(&downtimes));
+```
+
+
 
 
 
