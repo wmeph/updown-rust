@@ -78,7 +78,10 @@ This will update the configuration file used by updown-rust, or it will create o
 </pre>
 
 ### Ask for Downtimes
-<pre> updown downtimes <b>"your-token"</b></pre>
+<pre> updown downtimes <b>"your-token"</b>
+[{"id":"5f9c4d5cc2c1b360a10d76cd","error":"Service Unavailable","started_at":"2020-10-30T17:28:30Z",
+"ended_at":"2020-10-30T17:42:57Z","duration":867}]
+</pre>
 
 
 # API
