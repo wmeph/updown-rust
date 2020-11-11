@@ -6,13 +6,9 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct Config {
     pub(crate) api_key: String,
 
-    #[builder(setter(skip))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) private_api_key: Option<String>,
+    pub(crate) private_api_key: String,
 
-    #[builder(setter(skip))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) user_agent: Option<String>,
+    pub(crate) user_agent: String,
 }
 
 impl Config {

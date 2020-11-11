@@ -29,9 +29,9 @@ enum Subcommand {
     Config {
         api_key: String,
 
-        private_api_key: Option<String>,
+        private_api_key: String,
 
-        user_agent: Option<String>,
+        user_agent: String,
     },
 
     All {},
@@ -252,8 +252,8 @@ pub(crate) async fn metrics(
 ) -> Result<Metrics, MessageError> {
     let client = Client::new(
         config.api_key.as_str(),
-        config.private_api_key,
-        config.user_agent,
+        config.private_api_key.as_str(),
+        config.user_agent.as_str(),
     );
     let params = MetricsParams::parse(client.api_key, subcommand_matches);
     client.metrics(&params).await
@@ -265,8 +265,8 @@ pub(crate) async fn downtimes(
 ) -> Result<Downtimes, MessageError> {
     let client = Client::new(
         config.api_key.as_str(),
-        config.private_api_key,
-        config.user_agent,
+        config.private_api_key.as_str(),
+        config.user_agent.as_str(),
     );
     let params = DowntimeParams::parse(client.api_key, &subcommand_matches);
     client.downtimes(&params).await
@@ -278,8 +278,8 @@ pub(crate) async fn add(
 ) -> Result<Check, MessageError> {
     let client = Client::new(
         config.api_key.as_str(),
-        config.private_api_key,
-        config.user_agent,
+        config.private_api_key.as_str(),
+        config.user_agent.as_str(),
     );
     let params = CheckParams::parse_update(client.api_key, subcommand_matches);
     match params {

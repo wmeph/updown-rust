@@ -15,8 +15,8 @@ use reqwest::Url;
 /// The implementation defines methods that are used for the
 pub(crate) struct Client<'a> {
     pub(crate) api_key: &'a str,
-    read_only_api_key: String,
-    user_agent: String,
+    read_only_api_key: &'a str,
+    user_agent: &'a str,
     http_client: reqwest::Client,
 }
 
@@ -106,15 +106,15 @@ impl Client<'_> {
         Ok(resp)
     }
 
-    pub fn new(
-        api_key: &str,
-        private_api_key: Option<String>,
-        user_agent: Option<String>,
-    ) -> Client {
+    pub fn new<'a>(
+        api_key: &'a str,
+        private_api_key: &'a str,
+        user_agent: &'a str,
+    ) -> Client <'a> {
         let client = Client {
             api_key,
-            read_only_api_key: private_api_key.unwrap_or(String::from("")),
-            user_agent: user_agent.unwrap_or("".to_string()),
+            read_only_api_key: private_api_key,
+            user_agent: user_agent,
             http_client: Default::default(),
         };
         client

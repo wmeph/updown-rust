@@ -34,29 +34,55 @@ async fn main() {
     }
 
     let subcommand_matches = matches.subcommand().1.unwrap();
-
     if subcommand_name == "config" {
+        let mut api_key;
+        let mut private_api_key;
+        let mut user_agent;
+
         match subcommand_matches.value_of("api-key") {
             Some(k) => {
-                let api_key = k;
-                let config = config::Config {
-                    api_key: api_key.to_string(),
-                    private_api_key: None,
-                    user_agent: None,
-                };
-                match confy::store("updown-rust", config) {
-                    Ok(_c) => exit(exitcode::OK),
-                    Err(e) => {
-                        eprintln!("Failed to save config {}", e.to_string());
-                        exit(exitcode::IOERR)
-                    }
-                };
+                api_key = k;
             }
+
             None => {
                 println!("No api key provided. Exiting.");
                 exit(exitcode::CONFIG);
             }
         }
+
+        match subcommand_matches.value_of("private-api-key") {
+            Some(k) => {
+                private_api_key = k;
+            }
+
+            None => {
+                println!("No private (super) api key provided. Exiting.");
+                exit(exitcode::CONFIG);
+            }
+        }
+
+        match subcommand_matches.value_of("user-agent") {
+            Some (a) => {
+                user_agent = a;
+            }
+            None => {
+                println!("User agent not provided. Using blank value");
+                user_agent = "";
+            }
+        }
+
+        let config = config::Config {
+            api_key: api_key.to_string(),
+            private_api_key: private_api_key.to_string(),
+            user_agent: user_agent.to_string(),
+        };
+        match confy::store("updown-rust", config) {
+            Ok(_c) => exit(exitcode::OK),
+            Err(e) => {
+                eprintln!("Failed to save config {}", e.to_string());
+                exit(exitcode::IOERR)
+            }
+        };
     }
 
     let config;
@@ -74,8 +100,8 @@ async fn main() {
         "all" => {
             let client = Client::new(
                 config.api_key.as_str(),
-                config.private_api_key,
-                config.user_agent,
+                config.private_api_key.as_str(),
+                config.user_agent.as_str(),
             );
             let result = client.all().await;
             let result = serde_json::to_string(&result.unwrap()).unwrap();
@@ -84,8 +110,8 @@ async fn main() {
         "check" => {
             let client = Client::new(
                 config.api_key.as_str(),
-                config.private_api_key,
-                config.user_agent,
+                config.private_api_key.as_str(),
+                config.user_agent.as_str(),
             );
             let metrics = subcommand_matches.is_present("metrics");
             let token = subcommand_matches.value_of("token").unwrap();
@@ -114,8 +140,8 @@ async fn main() {
         "update" => {
             let client = Client::new(
                 config.api_key.as_str(),
-                config.private_api_key,
-                config.user_agent,
+                config.private_api_key.as_str(),
+                config.user_agent.as_str(),
             );
             let params = CheckParams::parse_update(&client.api_key, &subcommand_matches).unwrap();
 
@@ -125,8 +151,8 @@ async fn main() {
         "delete" => {
             let client = Client::new(
                 config.api_key.as_str(),
-                config.private_api_key,
-                config.user_agent,
+                config.private_api_key.as_str(),
+                config.user_agent.as_str(),
             );
             let token = subcommand_matches.value_of("token").unwrap();
             let result = serde_json::to_string(&client.delete(token).await.unwrap()).unwrap();
@@ -145,8 +171,6 @@ quick_error! {
         MessageFailed (cause : messages::MessageError){from()}
         ValidationFailed (cause : ValidationErrors){}
         ConfigurationFailed (cause : ConfyError){from()}
-        // RequestFailed( cause : reqwest::Error){from()}
-        // JsonFailed( cause : serde_json::Error){from()}
     }
 }
 
