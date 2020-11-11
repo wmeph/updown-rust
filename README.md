@@ -64,11 +64,24 @@ This will update the configuration file used by updown-rust, or it will create o
 </pre>
 
 ### Ask for Metrics, grouped by time
+<pre> updown metrics <b>"your-token"</b> --group time                                                                                                             
+{"2020-11-03T12:00:00Z":{"apdex":0.994,"requests":{"samples":2880,"failures":0,"satisfied":2846,"tolerated":34,"by_response_time":
+{"under125":826,"under250":1670,"under500":2846,"under1000":2870,"under2000":2880,"under4000":2880},"timings":null},"timings":
+{"redirect":1245,"namelookup":0,"connection":156,"handshake":209,"response":211,"total":1821}},"2020-10-31T12:00:00Z":{"apdex":0.997,"requests":
+{"samples":2878,"failures":0,"satisfied":2858,"tolerated":20,"by_response_time":
+{"under125":932,"under250":1766,"under500":2858,"under1000":2877,"under2000":2878,"under4000":2878},"timings":null},"timings":
+{"redirect":979,"namelookup":0,"connection":143,"handshake":162,"response":192,"total":1478}},"2020-11-10T10:00:00Z":{"apdex":0.988,"requests":
+{"samples":120,"failures":0,"satisfied":117,"tolerated":3,"by_response_time":
+{"under125":24,"under250":61,"under500":117,"under1000":118,"under2000":120,"under4000":120},"timings":null},"timings":
+{"redirect":1450,"namelookup":0,"connection":160,"handshake":229,"response":256,"total":2095}},
+... }
+</pre>
+
+### Ask for Downtimes
+<pre> updown downtimes <b>"your-token"</b>
 
 
 # API
-
-This is definitely not properly done yet!
 
 The API is subject to change, but it provides:
 
@@ -100,7 +113,7 @@ let mut result = client.metrics(&params);
 
 ### Create a Client from a config
 ```rust
-let config = ConfigBuilder::default().api_key(String::from("x6SyrW1Qnrn1sqyhyTqA")).build();
+let config = ConfigBuilder::default().api_key("your-api-key")).private_api_key("your-api-key").user_agent("your-user-agent").build();
 // Maybe unwrap the config, or match the result
 let client = Client::new(&config.api_key, None, None);
 // Use the client as above
