@@ -78,7 +78,7 @@ This will update the configuration file used by updown-rust, or it will create o
 </pre>
 
 ### Ask for Downtimes
-<pre> updown downtimes <b>"your-token"</b>
+<pre> updown downtimes <b>"your-token"</b></pre>
 
 
 # API
