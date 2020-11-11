@@ -42,7 +42,8 @@ SUBCOMMANDS:
 
 ### Configure settings for a new API key
 
-<pre>updown config <b>your-api-key</b> <b>your-private-api-key</b> <b>your-user-agent</b> (user-agent and private-api-key are currently ignored.)</pre>
+<pre>updown config <b>your-api-key</b> <b>your-private-api-key</b> <b>your-user-agent</b> 
+<p>(user-agent and private-api-key are currently ignored.)</pre>
 
 This will update the configuration file used by updown-rust, or it will create one if it doesn't exist. The details are handed off to [confy](https://docs.rs/confy/0.4.0/confy/)
 
@@ -61,6 +62,8 @@ This will update the configuration file used by updown-rust, or it will create o
 "published":false,"disabled_locations":[],"last_check_at":"2020-10-09T21:26:28Z",
 "+"custom_headers":{},"http_verb":"GET/HEAD"}]`
 </pre>
+
+### Ask for Metrics, grouped by time
 
 
 # API
