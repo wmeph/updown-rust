@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::command::{CliError, Parser};
 use crate::messages::metric::Message;
 use clap::ArgMatches;
 use validator::{Validate, ValidationError};
-use crate::command::{Parser, CliError};
 
 /// Checks represents the output of /api/checks/:token/Checks
 /// Possible return values are an array of Check messages or an error message.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Checks {
-    Error { error : Option<String> },
-    Checks(Vec<Check>)
+    Error { error: Option<String> },
+    Checks(Vec<Check>),
 }
 
 /// Check represents the output of /api/checks/:token; Vec<Check> is deserialized from /api/checks
@@ -87,7 +87,7 @@ pub struct CheckParams {
     #[serde(rename = "api-key")]
     api_key: String,
     #[serde(skip_serializing_if = "String::is_empty")]
-    pub(crate) token : String,
+    pub(crate) token: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[validate(url)]
     #[builder(default = "None")]
@@ -134,26 +134,54 @@ pub struct CheckParams {
 
 impl CheckParams {
     /// Parses parameters for the update request: PUT /api/checks/:token
-    pub(crate) fn parse_update(api_key: &str, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError> {
+    pub(crate) fn parse_update(
+        api_key: &str,
+        matches: &ArgMatches<'_>,
+    ) -> Result<CheckParams, CliError> {
         let mut params = CheckParamsBuilder::default();
         params.api_key(api_key.to_string());
         CheckParams::parse(params, matches)
     }
 
-    pub(crate) fn parse(mut params: CheckParamsBuilder, matches: &ArgMatches<'_>) -> Result<CheckParams, CliError>  {
+    pub(crate) fn parse(
+        mut params: CheckParamsBuilder,
+        matches: &ArgMatches<'_>,
+    ) -> Result<CheckParams, CliError> {
         let mut parser = Parser::new(matches);
-        let token : String = parser.parse_value("token").unwrap();
-        if !token.is_empty() {params.token(token);}
-        if let Some(url) = parser.parse_value("url") { params.url(url); }
-        if let Some(period) = parser.parse_value("period") { params.period(period); }
-        if let Some(apdex_t) = parser.parse_value("apdex_t") { params.apdex_t(apdex_t); }
-        if let Some(enabled) = parser.parse_value("enabled") {params.enabled(enabled);}
-        if let Some(published) = parser.parse_value("published") {params.published(published); }
-        if let Some(string_match) = parser.parse_value("string_match") {params.string_match(string_match); }
-        if let Some(alias) = parser.parse_value("alias") {params.alias(alias); }
-        if let Some(mute_until) = parser.parse_value("mute_until") {params.mute_until(mute_until); }
-        if let Some(http_verb) = parser.parse_value("http_verb") {params.http_verb(http_verb); }
-        if let Some(http_body) = parser.parse_value("http_body") {params.http_body(http_body); }
+        let token: String = parser.parse_value("token").unwrap();
+        if !token.is_empty() {
+            params.token(token);
+        }
+        if let Some(url) = parser.parse_value("url") {
+            params.url(url);
+        }
+        if let Some(period) = parser.parse_value("period") {
+            params.period(period);
+        }
+        if let Some(apdex_t) = parser.parse_value("apdex_t") {
+            params.apdex_t(apdex_t);
+        }
+        if let Some(enabled) = parser.parse_value("enabled") {
+            params.enabled(enabled);
+        }
+        if let Some(published) = parser.parse_value("published") {
+            params.published(published);
+        }
+        if let Some(string_match) = parser.parse_value("string_match") {
+            params.string_match(string_match);
+        }
+        if let Some(alias) = parser.parse_value("alias") {
+            params.alias(alias);
+        }
+        if let Some(mute_until) = parser.parse_value("mute_until") {
+            params.mute_until(mute_until);
+        }
+        if let Some(http_verb) = parser.parse_value("http_verb") {
+            params.http_verb(http_verb);
+        }
+        if let Some(http_body) = parser.parse_value("http_body") {
+            params.http_body(http_body);
+        }
         if matches.is_present("disabled_locations") {
             unimplemented!()
             //params.disabled_locations(matches.value_of("disabled_locations").unwrap().parse().unwrap());
@@ -163,8 +191,11 @@ impl CheckParams {
             // params.custom_headers(matches.value_of("custom_headers").unwrap().parse().unwrap());
         }
         let params: CheckParams = params.build().unwrap();
-        params.validate();
-        Ok(params)
+
+        match params.validate() {
+            Ok(p) => Ok(params),
+            Err(e) => Err(CliError::BadArg("Invalid parameters".to_string()))
+        }
     }
 }
 

@@ -1,17 +1,17 @@
-use serde::{Deserialize, Serialize};
-use validator::Validate;
 use clap::ArgMatches;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use validator::Validate;
 
 /// Metrics represents the output of /api/checks/:token/metrics
 /// Possible return values are a Metric message or an error message.
 ///
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum Metrics {
-    Error{ error : Option<String>},
-    Metrics(Option<Message>)
+    TimeGroupedMetrics(HashMap<String, Option<Message>>),
+    Metrics(Option<Message>),
 }
-
 
 #[derive(Clone, Serialize, Validate, Deserialize, Debug)]
 pub struct Message {
@@ -56,28 +56,36 @@ pub struct Timings {
 #[builder(setter(strip_option))]
 pub(crate) struct MetricsParams<'a> {
     #[serde(rename = "api-key")]
-    api_key: &'a str,
+    pub(crate) api_key: &'a str,
     #[serde(skip)]
-    pub(crate) token : &'a str,
+    pub(crate) token: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    from : Option<&'a str>,
+    from: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    to : Option<&'a str>,
+    to: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
-    group: Option<&'a str>,
+    pub(crate) group: Option<&'a str>,
 }
 
 impl MetricsParams<'_> {
-    pub(crate) fn parse<'a>(api_key: &'a str, matches: &'a ArgMatches<'_>) -> MetricsParams<'a> {
+    pub(crate) fn parse<'a>(api_key: &'a str, matches: &'a ArgMatches<'a>) -> MetricsParams<'a> {
         let mut params = MetricsParamsBuilder::default();
         params.api_key(api_key);
         params.token(matches.value_of("token").unwrap());
-        if let Some(from) = matches.value_of("from") { params.from(from); }
-        if let Some(to) = matches.value_of("to") { params.to(to); }
-        if let Some(group) = matches.value_of("group") { params.group(group); }
+        if let Some(from) = matches.value_of("from") {
+            params.from(from);
+        }
+
+        if let Some(to) = matches.value_of("to") {
+            params.to(to);
+        }
+
+        if let Some(group) = matches.value_of("group") {
+            params.group(group);
+        }
         params.build().unwrap()
     }
 }

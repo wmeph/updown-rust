@@ -1,17 +1,15 @@
 #[macro_use]
 extern crate quick_error;
 
-use command::Updown;
 use client::Client;
+use command::Updown;
 use config::Config;
-use messages::metric::MetricsParamsBuilder;
 
 use crate::messages::check::CheckParams;
+use confy::ConfyError;
 use std::process::exit;
 use structopt::StructOpt;
 use validator::ValidationErrors;
-use confy::ConfyError;
-
 
 extern crate clap;
 extern crate exitcode;
@@ -19,8 +17,8 @@ extern crate validator;
 #[macro_use]
 extern crate derive_builder;
 
-mod command;
 mod client;
+mod command;
 mod config;
 mod messages;
 
@@ -29,6 +27,12 @@ mod messages;
 async fn main() {
     let matches = Updown::clap().get_matches();
     let subcommand_name = matches.subcommand().0;
+
+    if subcommand_name == "" {
+        Updown::clap().print_help();
+        exit(exitcode::NOINPUT);
+    }
+
     let subcommand_matches = matches.subcommand().1.unwrap();
 
     if subcommand_name == "config" {
@@ -54,14 +58,9 @@ async fn main() {
             }
         }
     }
-    
-    if subcommand_name == "" {
-        Updown::clap().print_help();
-        exit(exitcode::NOINPUT);
-    }
 
     let config;
-    match Config::load_config(){
+    match Config::load_config() {
         Ok(c) => {
             config = c;
         }
@@ -70,18 +69,24 @@ async fn main() {
             exit(exitcode::CONFIG);
         }
     }
-    
 
     match subcommand_name {
-
         "all" => {
-            let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
+            let client = Client::new(
+                config.api_key.as_str(),
+                config.private_api_key,
+                config.user_agent,
+            );
             let result = client.all().await;
             let result = serde_json::to_string(&result.unwrap()).unwrap();
             println!("{}", result);
         }
         "check" => {
-            let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
+            let client = Client::new(
+                config.api_key.as_str(),
+                config.private_api_key,
+                config.user_agent,
+            );
             let metrics = subcommand_matches.is_present("metrics");
             let token = subcommand_matches.value_of("token").unwrap();
             let result =
@@ -91,30 +96,38 @@ async fn main() {
 
         "downtimes" => {
             let result = command::downtimes(config, subcommand_matches).await;
-            println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
+            println!("{}", serde_json::to_string(&result.unwrap()).unwrap());
         }
 
         "metrics" => {
             let result = command::metrics(config, subcommand_matches).await;
-            println!("{}", serde_json::to_string(&result.unwrap() ).unwrap());
+            println!("{}", serde_json::to_string(&result.unwrap()).unwrap());
         }
 
         "add" => {
-            println!("{}", serde_json::to_string(&command::add(config, subcommand_matches).await.unwrap()).unwrap());
+            println!(
+                "{}",
+                serde_json::to_string(&command::add(config, subcommand_matches).await.unwrap())
+                    .unwrap()
+            );
         }
         "update" => {
+            let client = Client::new(
+                config.api_key.as_str(),
+                config.private_api_key,
+                config.user_agent,
+            );
+            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches).unwrap();
 
-
-            let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
-            let params = CheckParams::parse_update(&client.api_key, &subcommand_matches)
-                .unwrap();
-
-            let result =
-                serde_json::to_string(&client.update(&params).await.unwrap()).unwrap();
+            let result = serde_json::to_string(&client.update(&params).await.unwrap()).unwrap();
             println!("{}", result);
         }
         "delete" => {
-            let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
+            let client = Client::new(
+                config.api_key.as_str(),
+                config.private_api_key,
+                config.user_agent,
+            );
             let token = subcommand_matches.value_of("token").unwrap();
             let result = serde_json::to_string(&client.delete(token).await.unwrap()).unwrap();
             println!("{}", result);

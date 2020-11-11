@@ -1,15 +1,15 @@
+use crate::command::Parser;
 use clap::ArgMatches;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-use crate::command::Parser;
 
 /// Downtimes represents the output of /api/checks/:token/downtimes
 /// Possible return values are an array of Downtime messages or an error message.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub(crate) enum Downtimes {
-    Error{ error : Option<String>},
-    Downtimes(Option<Vec<Downtime>>)
+    Error { error: Option<String> },
+    Downtimes(Option<Vec<Downtime>>),
 }
 
 #[derive(Serialize, Validate, Deserialize, Debug)]
@@ -28,14 +28,13 @@ pub(crate) struct DowntimeParams<'a> {
     #[serde(rename = "api-key")]
     api_key: &'a str,
     #[serde(skip)]
-    pub(crate) token : &'a str,
+    pub(crate) token: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default = "None")]
     page: Option<u32>,
     #[builder(default = "None")]
     #[serde(skip_serializing_if = "Option::is_none")]
     results: Option<bool>,
-
 }
 
 impl DowntimeParams<'_> {
@@ -45,8 +44,12 @@ impl DowntimeParams<'_> {
 
         params.api_key(api_key);
         params.token(matches.value_of("token").unwrap());
-        if let Some(page) = parser.parse_value("page") { params.page(page); }
-        if let Some(results) = parser.parse_value("results") { params.results(results); }
+        if let Some(page) = parser.parse_value("page") {
+            params.page(page);
+        }
+        if let Some(results) = parser.parse_value("results") {
+            params.results(results);
+        }
         params.build().unwrap()
     }
 }

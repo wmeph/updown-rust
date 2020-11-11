@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use crate::command::CliError;
+use std::fmt::Debug;
 
 pub(crate) mod check;
 pub(crate) mod downtime;
@@ -15,4 +15,3 @@ quick_error! {
         CommandFailed(cause : CliError) {display("{}", cause.to_string())}
     }
 }
-

@@ -1,28 +1,27 @@
-use structopt::StructOpt;
-use std::str::FromStr;
-use std::fmt::Debug;
-use clap::ArgMatches;
-use crate::messages::metric::{Message, MetricsParams};
-use crate::messages::MessageError;
 use crate::client::Client;
-use crate::messages::downtime::{DowntimeParams, Downtimes};
-use crate::messages::check::{CheckParams, Check};
-use serde::export::fmt::Display;
 use crate::config::Config;
+use crate::messages::check::{Check, CheckParams};
+use crate::messages::downtime::{DowntimeParams, Downtimes};
+use crate::messages::metric::{Metrics, MetricsParams};
+use crate::messages::MessageError;
+use clap::ArgMatches;
+use serde::export::fmt::Display;
+use std::fmt::Debug;
+use std::str::FromStr;
+use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
-name = "updown",
-about = "A cli for http://updown.io",
-rename_all = "snake"
+    name = "updown",
+    about = "A cli for http://updown.io",
+    rename_all = "snake"
 )]
 pub(crate) struct Updown {
-
     #[structopt(conflicts_with("opt"))]
-    token_or_url : Option<String>,
+    token_or_url: Option<String>,
 
     #[structopt(subcommand)]
-    opt : Option<Subcommand>
+    opt: Option<Subcommand>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -64,7 +63,7 @@ enum Subcommand {
         to: Option<String>,
 
         #[structopt(long, possible_values=&["time", "host"])]
-        group: Option<String>
+        group: Option<String>,
     },
 
     Add {
@@ -196,22 +195,25 @@ enum Subcommand {
 }
 
 pub(crate) struct Parser<'a> {
-    pub(crate) matches : &'a ArgMatches<'a>,
-    pub(crate) parse_errors : Vec<String>,
-    pub(crate) successful_parse : bool
+    pub(crate) matches: &'a ArgMatches<'a>,
+    pub(crate) parse_errors: Vec<String>,
+    pub(crate) successful_parse: bool,
 }
 
 impl Parser<'_> {
-    pub(crate) fn new<'a>(matches : &'a ArgMatches<'_>) -> Parser<'a> {
+    pub(crate) fn new<'a>(matches: &'a ArgMatches<'_>) -> Parser<'a> {
         Parser {
             matches,
             parse_errors: vec![],
-            successful_parse : true
+            successful_parse: true,
         }
     }
 
     pub(crate) fn parse_value<T>(&mut self, key: &str) -> Option<T>
-        where T: FromStr, T::Err: Debug + Display {
+    where
+        T: FromStr,
+        T::Err: Debug + Display,
+    {
         let result = self.matches.value_of(key);
         match result {
             Some(r) => {
@@ -220,18 +222,19 @@ impl Parser<'_> {
                 match v {
                     Ok(m) => Option::from(m),
                     Err(e) => {
-                        self.parse_errors.push(format!("{} ({} given)",e, self.matches.value_of("page").unwrap()));
+                        self.parse_errors.push(format!(
+                            "{} ({} given)",
+                            e,
+                            self.matches.value_of("page").unwrap()
+                        ));
                         self.successful_parse = false;
                         None
                     }
                 }
             }
-            _ => Option::None
+            _ => Option::None,
         }
     }
-
-
-
 }
 
 quick_error! {
@@ -239,32 +242,48 @@ quick_error! {
     /// Error specific to updown
     #[derive(Debug)]
     pub enum  CliError{
-       BadArg (message : String) { display("Failed to parse value(s) : {}", message )}
+       BadArg (message : String ) { display("Failed to parse value(s) : {}", message )}
     }
 }
 
-pub(crate) async fn metrics<'r,'s>(config: Config, subcommand_matches : &ArgMatches<'_>) -> Result<Message, MessageError> {
-    let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
-    let params = MetricsParams::parse(client.api_key, &subcommand_matches);
+pub(crate) async fn metrics(
+    config: Config,
+    subcommand_matches: &ArgMatches<'_>,
+) -> Result<Metrics, MessageError> {
+    let client = Client::new(
+        config.api_key.as_str(),
+        config.private_api_key,
+        config.user_agent,
+    );
+    let params = MetricsParams::parse(client.api_key, subcommand_matches);
     client.metrics(&params).await
-    // match params {
-    //     Ok(p)=> client.metrics(&p).await,
-    //     Err(e) => Err(MessageError::CommandFailed(e))
-    // }
 }
 
-pub(crate) async fn downtimes(config: Config, subcommand_matches : &ArgMatches<'_>) -> Result<Downtimes, MessageError> {
-    let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
+pub(crate) async fn downtimes(
+    config: Config,
+    subcommand_matches: &ArgMatches<'_>,
+) -> Result<Downtimes, MessageError> {
+    let client = Client::new(
+        config.api_key.as_str(),
+        config.private_api_key,
+        config.user_agent,
+    );
     let params = DowntimeParams::parse(client.api_key, &subcommand_matches);
     client.downtimes(&params).await
 }
 
-pub(crate) async fn add(config: Config, subcommand_matches : &ArgMatches<'_>) -> Result<Check, MessageError> {
-    let client = Client::new(config.api_key.as_str(), config.private_api_key, config.user_agent);
+pub(crate) async fn add(
+    config: Config,
+    subcommand_matches: &ArgMatches<'_>,
+) -> Result<Check, MessageError> {
+    let client = Client::new(
+        config.api_key.as_str(),
+        config.private_api_key,
+        config.user_agent,
+    );
     let params = CheckParams::parse_update(client.api_key, subcommand_matches);
     match params {
-        Ok(p)=> client.update(&p).await,
-        Err(e) => Err(MessageError::CommandFailed(e))
+        Ok(p) => client.update(&p).await,
+        Err(e) => Err(MessageError::CommandFailed(e)),
     }
 }
-

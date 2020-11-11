@@ -4,10 +4,10 @@ use std::collections::HashMap;
 
 use crate::messages::check::{Check, CheckParams, Checks};
 use crate::messages::downtime::{DowntimeParams, Downtimes};
+use crate::messages::metric::{Metrics, MetricsParams};
 use crate::messages::MessageError;
-use crate::{CHECKS_URL};
+use crate::CHECKS_URL;
 use reqwest::Url;
-use crate::messages::metric::{MetricsParams, Message};
 
 /// Client is the API entry point.
 /// A new Client instance will hold references to the user's full(?) and read-only API keys.
@@ -49,13 +49,10 @@ impl Client<'_> {
         Ok(resp)
     }
 
-    pub async fn downtimes(
-        &self,
-        params: &DowntimeParams<'_>,
-    ) -> Result<Downtimes, MessageError> {
+    pub async fn downtimes(&self, params: &DowntimeParams<'_>) -> Result<Downtimes, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
-        let url =
-            Url::parse((CHECKS_URL.to_owned() + "/" + params.token + "/downtimes").as_str()).unwrap();
+        let url = Url::parse((CHECKS_URL.to_owned() + "/" + params.token + "/downtimes").as_str())
+            .unwrap();
         let resp = self
             .http_client
             .get(url)
@@ -67,11 +64,7 @@ impl Client<'_> {
         Ok(resp)
     }
 
-
-    pub async fn metrics(
-        &self,
-        params: &MetricsParams<'_>,
-    ) -> Result<Message, MessageError> {
+    pub async fn metrics(&self, params: &MetricsParams<'_>) -> Result<Metrics, MessageError> {
         // -> Result<HashMap<String, Downtime>, MessageError>{
         let url =
             Url::parse((CHECKS_URL.to_owned() + "/" + params.token + "/metrics").as_str()).unwrap();
@@ -86,11 +79,9 @@ impl Client<'_> {
         Ok(resp)
     }
 
-    pub async fn update(
-        &self,
-        params: &CheckParams,
-    ) -> Result<Check, MessageError> {
-        let url = Url::parse((CHECKS_URL.to_owned() + "/" + &params.token.as_str()).as_str()).unwrap();
+    pub async fn update(&self, params: &CheckParams) -> Result<Check, MessageError> {
+        let url =
+            Url::parse((CHECKS_URL.to_owned() + "/" + &params.token.as_str()).as_str()).unwrap();
         let resp = self
             .http_client
             .put(url)
@@ -102,10 +93,7 @@ impl Client<'_> {
         Ok(resp)
     }
 
-    pub async fn delete(
-        &self,
-        token: &str,
-    ) -> Result<HashMap<String, String>, MessageError> {
+    pub async fn delete(&self, token: &str) -> Result<HashMap<String, String>, MessageError> {
         let url = Url::parse((CHECKS_URL.to_owned() + "/" + token).as_str()).unwrap();
         let resp = self
             .http_client
@@ -118,12 +106,16 @@ impl Client<'_> {
         Ok(resp)
     }
 
-    pub fn new(api_key : &str, private_api_key : Option<String>, user_agent : Option<String>) -> Client {
-        let client = Client{
+    pub fn new(
+        api_key: &str,
+        private_api_key: Option<String>,
+        user_agent: Option<String>,
+    ) -> Client {
+        let client = Client {
             api_key,
             read_only_api_key: private_api_key.unwrap_or(String::from("")),
             user_agent: user_agent.unwrap_or("".to_string()),
-            http_client: Default::default()
+            http_client: Default::default(),
         };
         client
     }
