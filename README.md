@@ -42,7 +42,7 @@ SUBCOMMANDS:
 
 ### Configure settings for a new API key
 
-`updown config :API_KEY`
+<pre>updown config <b>your-api-key</b> <b>your-private-api-key</b> <b>your-user-agent</b> (user-agent and private-api-key are currently ignored.)</pre>
 
 This will update the configuration file used by updown-rust, or it will create one if it doesn't exist. The details are handed off to [confy](https://docs.rs/confy/0.4.0/confy/)
 
@@ -81,7 +81,7 @@ The messages are all serializable to JSON.
 
 ### Create a Client with keys and user agent (with no user details)
 ```rust
-let client = Client::new("your-public-api-key", Option::from("your-private-api-key"), None);
+let client = Client::new("your-public-api-key", "your-private-api-key", "your-user-agent");
 ```
 
 ### Ask for Metrics
